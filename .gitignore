@@ -1,3 +1,4 @@
+# maven
 target/
 pom.xml.tag
 pom.xml.releaseBackup
@@ -7,3 +8,11 @@ release.properties
 dependency-reduced-pom.xml
 buildNumber.properties
 .mvn/timing.properties
+
+# eclipse
+.project
+.classpath
+.settings
+
+# vim
+.*.swp

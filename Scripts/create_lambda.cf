@@ -1,0 +1,216 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Creates the API Gateway and Lambda functions for the Lambda/Java Webapp example",
+
+    "Parameters": {
+        "BaseName": {
+            "Description": "Base name for all objects created by this template",
+            "Type": "String"
+        },
+        "Bucket": {
+            "Description": "Name of the bucket used by the application",
+            "Type": "String"
+        },
+        "WebappJar": {
+            "Description": "Fully-qualified path to the WebApp deployment JAR",
+            "Type": "String"
+        }
+    },
+
+    "Resources": {
+
+        "CloudwatchLogGroup": {
+            "Type" : "AWS::Logs::LogGroup",
+            "DeletionPolicy" : "Delete",
+            "Properties" : {
+                "LogGroupName" : { "Fn::Sub": "/aws/lambda/${BaseName}-Webapp" },
+                "RetentionInDays" : 7
+            }
+        },
+
+        "CloudwatchLoggingPolicy": {
+            "Type": "AWS::IAM::ManagedPolicy",
+            "Properties": {
+                "Description": "Allows creation of a logstream and writing of logging events",
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect":   "Allow",
+                            "Action":   [ "logs:CreateLogGroup" ],
+                            "Resource": [ { "Fn::Sub": "arn:aws:logs:*:${AWS::AccountId}:*" } ]
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "logs:CreateLogStream",
+                                "logs:PutLogEvents"
+                            ],
+                            "Resource": [ { "Fn::Sub": "arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/lambda/${BaseName}-Webapp:*" } ]
+                        }
+                    ]
+                }
+            }
+        },
+
+        "WebappExecutionRole": {
+            "Type": "AWS::IAM::Role",
+            "DependsOn": [ "CloudwatchLoggingPolicy" ],
+            "Properties": {
+                "RoleName": "WebappExecutionRole",
+                "Path": "/service-role/",
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": {
+                        "Effect":   "Allow",
+                        "Action":   [ "sts:AssumeRole" ],
+                        "Principal": { "Service": [ "lambda.amazonaws.com" ] }
+                    }
+                },
+                "ManagedPolicyArns": [
+                    { "Ref" : "CloudwatchLoggingPolicy" }
+                ]
+            }
+        },
+
+        "WebappLambdaFunction": {
+            "Type":         "AWS::Lambda::Function",
+            "DependsOn":    [ "WebappExecutionRole" ],
+            "Properties": {
+                "Description": "Implements the web-app portion of the example",
+                "Runtime": "java8",
+                "FunctionName": { "Fn::Sub": "${BaseName}-Webapp" },
+                "Code": {
+                    "S3Bucket": { "Ref": "Bucket" },
+                    "S3Key":    { "Ref": "WebappJar" }
+                },
+                "Handler": "com.kdgregory.example.javalambda.webapp.Dispatcher::handler",
+                "MemorySize": 256,
+                "Timeout": 15,
+                "Role": { "Fn::GetAtt" : [ "WebappExecutionRole", "Arn" ] }
+            }
+        },
+
+        "APIGateway": {
+            "Type":             "AWS::ApiGateway::RestApi",
+            "Properties": {
+                "Name":         { "Fn::Sub": "${BaseName}" },
+                "Description":  "A photo-sharing API fronting Lambda and S3"
+            }
+        },
+
+        "APIGatewayAPIPathRoot": {
+            "Type":             "AWS::ApiGateway::Resource",
+            "Properties": {
+                "RestApiId":    { "Ref": "APIGateway" },
+                "ParentId":     { "Fn::GetAtt": ["APIGateway", "RootResourceId"] },
+                "PathPart":     "api"
+            }
+        },
+
+        "APIGatewayAPIPathAction": {
+            "Type":             "AWS::ApiGateway::Resource",
+            "Properties": {
+                "RestApiId":    { "Ref": "APIGateway" },
+                "ParentId":     { "Ref": "APIGatewayAPIPathRoot" },
+                "PathPart":     "{action}"
+            }
+        },
+
+        "APIGatewayAPIMethod": {
+            "Type":                 "AWS::ApiGateway::Method",
+            "DependsOn":            [ "APIGateway", "WebappLambdaFunction" ],
+            "Properties": {
+                "RestApiId":        { "Ref": "APIGateway" },
+                "ResourceId":       { "Ref": "APIGatewayAPIPathAction" },
+                "HttpMethod":       "POST",
+                "AuthorizationType": "NONE",
+                "RequestParameters": {
+                    "method.request.path.action": true
+                },
+                "Integration": {
+                    "IntegrationHttpMethod":    "POST",
+                    "Type":                     "AWS",
+                    "Uri":                      { "Fn::Join": ["", [
+                                                    "arn:aws:apigateway:",
+                                                    { "Ref" : "AWS::Region" },
+                                                    ":lambda:path/2015-03-31/functions/",
+                                                    { "Fn::GetAtt": ["WebappLambdaFunction", "Arn"] },
+                                                    "/invocations"
+                                                ]]},
+                    "PassthroughBehavior":      "NEVER",
+                    "RequestTemplates": {
+                        "application/json":     { "Fn::Join": ["", [
+                                                    "{\n",
+                                                    "    \"action\"        : \"$input.params('action')\",\n",
+                                                    "    \"httpMethod\"    : \"$context.httpMethod\",\n",
+                                                    "    #set( $cookies = \"$input.params()['header']['Cookie']\" )\n",
+                                                    "    #foreach( $cookie in $cookies.split(\"; *\") )\n",
+                                                    "        #set( $splitCookie = $cookie.split(\"=\") )\n",
+                                                    "        #if ($splitCookie[0] == \"ACCESS_TOKEN\")\n",
+                                                    "            \"accessToken\" : \"$splitCookie[1]\",\n",
+                                                    "        #elseif ($splitCookie[0] == \"REFRESH_TOKEN\")\n",
+                                                    "            \"refreshToken\" : \"$splitCookie[1]\",\n",
+                                                    "        #end\n",
+                                                    "    #end\n",
+                                                    "    \"body\"          : $input.json('$')\n",
+                                                    "}\n"
+                                                ]]}
+                    },
+                    "IntegrationResponses": [
+                        {
+                            "StatusCode":           "200",
+                            "ResponseParameters": {
+                                "method.response.header.Set-Cookie": "'Lowercased'",
+                                "method.response.header.Set-COOKIE": "'Capitalized'"
+                            },
+                            "ResponseTemplates": {
+                                "application/json":     { "Fn::Join": ["", [
+                                                            "{\n",
+                                                            "    \"responseCode\": $input.json('$.responseCode'),\n",
+                                                            "    \"description\":  $input.json('$.description'),\n",
+                                                            "    \"data\":         $input.json('$.data')\n",
+                                                            "}\n"
+                                                        ]]}
+                            }
+                        }
+                    ]
+                },
+                "MethodResponses": [
+                    {
+                        "StatusCode":               "200",
+                        "ResponseParameters": {
+                            "method.response.header.Set-Cookie": false,
+                            "method.response.header.Set-COOKIE": false
+                        },
+                        "ResponseModels": {
+                            "application/json":     "Empty"
+                        }
+                    }
+                ]
+            }
+        },
+
+        "ApiGatewayLambdaPermission": {
+            "Type":                 "AWS::Lambda::Permission",
+            "DependsOn":            [ "WebappLambdaFunction", "APIGatewayAPIMethod" ],
+            "Properties": {
+                "Action":           "lambda:InvokeFunction",
+                "FunctionName":     { "Fn::GetAtt": ["WebappLambdaFunction", "Arn"] },
+                "Principal":        "apigateway.amazonaws.com"
+            }
+        },
+
+        "APIGatewayDeployment": {
+            "Type":                 "AWS::ApiGateway::Deployment",
+            "DependsOn":            [ "APIGatewayAPIMethod" ],
+            "Properties": {
+                "Description":      "Test deployment of the LambdaPhoto API",
+                "RestApiId":        { "Ref": "APIGateway" },
+                "StageName":        "test",
+                "StageDescription": {
+                }
+            }
+        }
+    }
+}
