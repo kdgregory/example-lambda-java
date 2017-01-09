@@ -1,8 +1,8 @@
-LambdaPhoto - A Java Web-app Running on AWS Lambda
+# LambdaPhoto - A Java Web-app Running on AWS Lambda
 
-# Components
+## Components
 
-# Web-App Implementation
+## Web-App Implementation
 
 There is a single web-app dispatcher, that takes and returns a map (transformed to/from JSON by Lambda).
 
@@ -11,7 +11,7 @@ The dispatcher calls an appropriate service method, based on the action (extract
 The dispatcher knows which methods require authorization, and will check prior to calling the method (or return a "not authorized" response).
 
 
-## Request Map
+### Request Map
 
 | Field                 | Description |
 |-----------------------|-------------|
@@ -22,7 +22,7 @@ The dispatcher knows which methods require authorization, and will check prior t
 | `body`                | Request-specific map of request data. |
 
 
-## Response Map
+### Response Map
 
 | Field                 | Description |
 |-----------------------|-------------|
@@ -33,16 +33,23 @@ The dispatcher knows which methods require authorization, and will check prior t
 | `data`                | Action-specific data object. This may be a map, an array, or nil. |
 
 
-## Authorization
+### Authorization
 
 
-# Client Implementation
+## Client Implementation
 
-# Building and Running
+## Building and Running
 
-## Building the software
+### Building the software
 
-## Deploying to AWS
+The Java components are built using Maven, with all dependencies available from Maven Central.
+
+** Not strictly true: right now I'm depending on a snapshot revision of the kdgcommons library; 
+you'll have to [check it out](https://sourceforge.net/p/kdgcommons/code/HEAD/tree/) and build yourself **
+
+    ( cd Webapp ; mvn clean install )
+
+### Deploying to AWS
 
 Deploying the application is a multi-step process. Parts are handled by CloudFormation, and parts are handled by shell scripts.
 Run all scripts from the base directory
@@ -60,6 +67,8 @@ Run all scripts from the base directory
 
 2. Create the Cognito user pool.  
 
+    ** this step isn't currently supported **
+
     ```
     Scripts/create_pool.sh POOL_NAME
     ```
@@ -69,7 +78,9 @@ Run all scripts from the base directory
     
     When you run the script it will output the pool ID and client ID; you'll need these for the final step.
     
-3. Create the database and plumbing
+3. Create the database and plumbing  
+
+    ** this step isn't currently supported **
 
     ```
     insert script here
@@ -85,6 +96,6 @@ Run all scripts from the base directory
     ```
 
 
-## Invoking via CURL
+### Invoking via CURL
 
-    curl -v -b ~/tmp/cookies.dat -H 'Content-Type: application/json' -d '{"argle": "bargle", "fribble": 123}' -H "X-Example: argle" -H "X-Example: bargle" https://ttnpr159sc.execute-api.us-east-1.amazonaws.com/test/api/signin
+    curl -v -b ~/tmp/cookies.dat -H 'Content-Type: application/json' -d '{"email": "example@mailinator.com", "password": "MyCoolPassword123"}' https://7nb67d5al6.execute-api.us-east-1.amazonaws.com/test/api/signin
