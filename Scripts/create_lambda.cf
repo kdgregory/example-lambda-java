@@ -161,8 +161,8 @@
                         {
                             "StatusCode":           "200",
                             "ResponseParameters": {
-                                "method.response.header.Set-Cookie": "'Lowercased'",
-                                "method.response.header.Set-COOKIE": "'Capitalized'"
+                                "method.response.header.Set-Cookie": "integration.response.body.accessTokenHeader",
+                                "method.response.header.Set-COOKIE": "integration.response.body.refreshTokenHeader"
                             },
                             "ResponseTemplates": {
                                 "application/json":     { "Fn::Join": ["", [
