@@ -57,7 +57,7 @@
             "Type": "AWS::IAM::Role",
             "DependsOn": [ "CloudwatchLoggingPolicy" ],
             "Properties": {
-                "RoleName": "WebappExecutionRole",
+                "RoleName": { "Fn::Sub": "${BaseName}-WebappExecutionRole" },
                 "Path": "/service-role/",
                 "AssumeRolePolicyDocument": {
                     "Version": "2012-10-17",
@@ -130,7 +130,7 @@
                 },
                 "Integration": {
                     "IntegrationHttpMethod":    "POST",
-                    "Type":                     "AWS",
+                    "Type":                     "AWS_PROXY",
                     "Uri":                      { "Fn::Join": ["", [
                                                     "arn:aws:apigateway:",
                                                     { "Ref" : "AWS::Region" },
@@ -138,51 +138,11 @@
                                                     { "Fn::GetAtt": ["WebappLambdaFunction", "Arn"] },
                                                     "/invocations"
                                                 ]]},
-                    "PassthroughBehavior":      "NEVER",
-                    "RequestTemplates": {
-                        "application/json":     { "Fn::Join": ["", [
-                                                    "{\n",
-                                                    "    \"action\"        : \"$input.params('action')\",\n",
-                                                    "    \"httpMethod\"    : \"$context.httpMethod\",\n",
-                                                    "    #set( $cookies = \"$input.params()['header']['Cookie']\" )\n",
-                                                    "    #foreach( $cookie in $cookies.split(\"; *\") )\n",
-                                                    "        #set( $splitCookie = $cookie.split(\"=\") )\n",
-                                                    "        #if ($splitCookie[0] == \"ACCESS_TOKEN\")\n",
-                                                    "            \"accessToken\" : \"$splitCookie[1]\",\n",
-                                                    "        #elseif ($splitCookie[0] == \"REFRESH_TOKEN\")\n",
-                                                    "            \"refreshToken\" : \"$splitCookie[1]\",\n",
-                                                    "        #end\n",
-                                                    "    #end\n",
-                                                    "    \"body\"          : $input.json('$')\n",
-                                                    "}\n"
-                                                ]]}
-                    },
-                    "IntegrationResponses": [
-                        {
-                            "StatusCode":           "200",
-                            "ResponseParameters": {
-                                "method.response.header.Set-Cookie": "integration.response.body.accessTokenHeader",
-                                "method.response.header.Set-COOKIE": "integration.response.body.refreshTokenHeader"
-                            },
-                            "ResponseTemplates": {
-                                "application/json":     { "Fn::Join": ["", [
-                                                            "{\n",
-                                                            "    \"responseCode\": $input.json('$.responseCode'),\n",
-                                                            "    \"description\":  $input.json('$.description'),\n",
-                                                            "    \"data\":         $input.json('$.data')\n",
-                                                            "}\n"
-                                                        ]]}
-                            }
-                        }
-                    ]
+                    "PassthroughBehavior":      "WHEN_NO_MATCH"
                 },
                 "MethodResponses": [
                     {
                         "StatusCode":               "200",
-                        "ResponseParameters": {
-                            "method.response.header.Set-Cookie": false,
-                            "method.response.header.Set-COOKIE": false
-                        },
                         "ResponseModels": {
                             "application/json":     "Empty"
                         }

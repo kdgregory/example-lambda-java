@@ -4,39 +4,35 @@
 
 ## Web-App Implementation
 
-There is a single web-app dispatcher, that takes and returns a map (transformed to/from JSON by Lambda).
+The web-app is implemented as a single Lambda function, that expects and returns JSON formated per the API Gateway
+Proxy [docs](http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-set-up-simple-proxy.html).
 
-The dispatcher calls an appropriate service method, based on the action (extracted from the original request by API Gateway) and HTTP method.
+The last component of the request URL is the action to be performed. API Gateway extracts this as a path parameter
+named `action`. 
 
-The dispatcher knows which methods require authorization, and will check prior to calling the method (or return a "not authorized" response).
-
-
-### Request Map
-
-| Field                 | Description |
-|-----------------------|-------------|
-| `action`              | The request action, extracted from the URL by API Gateway. Used to dispatch the request. |
-| `httpMethod`          | The HTTP request method; currently we only use GET and POST. |
-| `accessToken`         | (optional) A Cognito IDP access token, used to authorize the request. Extracted from cookies by API Gateway. |
-| `refreshToken`        | (optional) A Cognito IDP refresh token, used to regenerate a missing/expired access token. Extracted from cookies by API Gateway. |
-| `body`                | Request-specific map of request data. |
-
-
-### Response Map
+A normal response (HTTP status code 200) contains a JSON body with the following fields:
 
 | Field                 | Description |
 |-----------------------|-------------|
 | `responseCode`        | A string that describes the result of the operation. The value "SUCCESS" indicates success everywhere; other values are service-specific. |
 | `description`         | Text to display to the user in the event of a non-success response. |
-| `accessTokenHeader`   | (optional) A Cognito IDP access token, used to authorize the request. If present, will be provided in a Set-Cookie header by API Gateway. |
-| `refreshTokenHeader`  | (optional) A Cognito IDP refresh token, used to regenerate a missing/expired access token. If present, will be provided in a Set-Cookie header by API Gateway. |
-| `data`                | Action-specific data object. This may be a map, an array, or nil. |
+| `data`                | Action-specific data object. This may be a any JSON-serializable type, but will generally be a map or list. Operations that do not return data may omit this field entirely. |
 
+Error responses omit the body, and use one of the following status codes: 
 
-### Authorization
+* 400 to indicate any error with the request content (generally, an untranslateable body).
+  Translateable-but-incorrect body content will typically be reported using a non-success
+  response code.
+* 404 to indicate an invalid endpoint.
+* 500 to indicate an unexpected server error.
+
+Credentials are managed as tokens (access and refresh), and transmitted to/from the server via http-only cookies. See the Authentication section for more information.
 
 
 ## Client Implementation
+
+## Authentication
+
 
 ## Building and Running
 

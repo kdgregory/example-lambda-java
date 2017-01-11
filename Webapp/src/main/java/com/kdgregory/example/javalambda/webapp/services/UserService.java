@@ -1,12 +1,14 @@
 // Copyright (c) Keith D Gregory, all rights reserved
 package com.kdgregory.example.javalambda.webapp.services;
 
-import java.util.Map;
+import java.util.UUID;
 
 import net.sf.kdgcommons.lang.StringUtil;
 
-import com.kdgregory.example.javalambda.webapp.Constants;
-import com.kdgregory.example.javalambda.webapp.Utils;
+import com.kdgregory.example.javalambda.webapp.Request;
+import com.kdgregory.example.javalambda.webapp.Response;
+import com.kdgregory.example.javalambda.webapp.ResponseCodes;
+import com.kdgregory.example.javalambda.webapp.Tokens;
 
 /**
  *  Manages users: sign-up (with confirmation), sign-in, and token-based
@@ -47,9 +49,9 @@ public class UserService
      *  <dd> The user's password.
      *  </dl>
      */
-    public Map<String,Object> signIn(Map<String,Object> request)
+    public Response signIn(Request request)
     {
-        return Utils.buildResponse(request, Constants.ResponseCodes.SUCCESS, null);
+        return new Response(ResponseCodes.SUCCESS, null);
     }
 
 
@@ -62,9 +64,9 @@ public class UserService
      *  <dd> The user's email address, which serves as the account identifier.
      *  </dl>
      */
-    public Map<String,Object> signUp(Map<String,Object> request)
+    public Response signUp(Request request)
     {
-        return Utils.buildResponse(request, Constants.ResponseCodes.SUCCESS, null);
+        return new Response(ResponseCodes.SUCCESS, null);
     }
 
 
@@ -81,30 +83,34 @@ public class UserService
      *  <dd> The permanent password selected by the user.
      *  </dl>
      */
-    public Map<String,Object> confirmSignUp(Map<String,Object> request)
+    public Response confirmSignUp(Request request)
     {
-        return Utils.buildResponse(request, Constants.ResponseCodes.SUCCESS, null);
+        return new Response(ResponseCodes.SUCCESS, null);
     }
 
 
     /**
      *  Verifies that a user has logged in, refreshing their access token if required.
      *
-     *  Returns a true/false response to indicate authentication, <em>and modifies the
-     *  passed request<em> to either (1) remove tokens if the user is authenticated (to
-     *  avoid needless Set-Cookie headers) or (2) replace the access token if changed.
+     *  Returns a shell response that contains the result of authentication along with
+     *  potentially a new set of tokens. Before invoking any operation that requires
+     *  authentication, the caller should check the response code; if it's not SUCCESS
+     *  return the response to the user. Assuming that the user is authenticated, the
+     *  caller should merge the tokens from this response with the response from the
+     *  authenticated method.
      */
-    public boolean authenticate(Map<String,Object> request)
+    public Response authenticate(Request request)
     {
-        String accessToken = String.valueOf(request.get(Constants.CommonRequestFields.ACCESS_TOKEN));
-        String refreshToken = String.valueOf(request.get(Constants.CommonRequestFields.REFRESH_TOKEN));
+        String accessToken = request.getTokens().getAccessToken();
+        String refreshToken = request.getTokens().getRefreshToken();
 
-        if (StringUtil.isBlank(accessToken) || StringUtil.isBlank(refreshToken))
-            return false;
+//        if (StringUtil.isBlank(accessToken) || StringUtil.isBlank(refreshToken))
+//            return new Response(ResponseCodes.NOT_AUTHENTICATED);
 
-        // FIXME - check authentication, remove tokens; for now I want to leave them, to verify
-        //         Set-Cookie behavior
+        // TODO - check authentication and potentially get a new set of tokens
+        //        for now I'm going to return a response with a dummy access token
 
-        return true;
+        Tokens tokens = new Tokens(UUID.randomUUID().toString(), null);
+        return new Response(tokens);
     }
 }
