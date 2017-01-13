@@ -1,0 +1,29 @@
+<div id = "signin" class="loginContainer">
+<p class="actionDesc">
+    If you already have an active account, enter your email address and
+    password to sign in.
+
+<form name="signin" action="#">
+    <table class="login">
+    <tr><th><label for="EMAIL">Email address:</label></th>
+        <td><input name="EMAIL" type="email" size=40 maxlength=128 autofocus="true" ng-model="$ctrl.signinEmail"></input>
+    <tr><th><label for="PASSWORD">Password:</label></th>
+        <td><input name="PASSWORD" type="password" ng-model="$ctrl.signinPassword"></input>
+    <tr><td>&nbsp;</td>
+        <td> <button type="button" class="preferredButton" ng-click="$ctrl.submitSignin()">Sign In</button> </td>
+    </table>
+</form>
+
+<p class="actionDesc">
+    If you don't already have an account, enter your email address here. You will
+    receive an email with a temporary password within a few moments.
+
+<form name="signup" action="#">
+    <table class="login">
+    <tr><th><label for="EMAIL">Email address:</label></th>
+        <td><input name="EMAIL" type="email" size=40 maxlength=128 ng-model="$ctrl.signupEmail"></input>
+    <tr><td>&nbsp;</td>
+        <td> <button type="button" class="secondaryButton" ng-click="$ctrl.submitSignup()">Sign Up</button> </td>
+    </table>
+</form>
+</div>

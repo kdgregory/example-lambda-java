@@ -1,0 +1,20 @@
+<div id="confirmSignup" class="loginContainer">
+
+    <p class="actionDesc">
+        Please enter your email address, the temporary password that you received in the email,
+        and a permanent password (twice). Then click Confirm.
+    <form name="confirm" action="#">
+        <table class="login">
+        <tr><th><label for="EMAIL">Email address:</label></th>
+            <td><input name="EMAIL" type="email" size=40 maxlength=128 autofocus ng-model="$ctrl.email"></input>
+        <tr><th><label for="TEMPORARY_PASSWORD">Temporary Password:</label></th>
+            <td><input name="TEMPORARY_PASSWORD" type="password" ng-model="$ctrl.temporaryPassword"></input>
+        <tr><th><label for="PASSWORD">Permanent Password:</label></th>
+            <td><input name="PASSWORD" type="password" ng-model="$ctrl.finalPassword"></input>
+        <tr><th><label for="CONFIRM_PASSWORD">Confirm Permanent Password:</label></th>
+            <td><input name="CONFIRM_PASSWORD" type="password" ng-model="$ctrl.confirmationPassword"></input>
+        <tr><td>&nbsp;</td>
+            <td> <button type="button" class="preferredButton" ng-click="$ctrl.confirmSignup()">Confirm Signup</button> </td>
+        </table>
+    </form>
+</div>
