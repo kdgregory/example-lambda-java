@@ -19,12 +19,13 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-        <aws-sdk.version>1.11.60</aws-sdk.version>
+        <aws-sdk.version>1.11.83</aws-sdk.version>
         <aws-lambda-core.version>1.1.0</aws-lambda-core.version>
         <aws-lambda-logger.version>1.0.0</aws-lambda-logger.version>
         <jackson.version>2.8.5</jackson.version>
+        <jose4j.version>0.5.4</jose4j.version>
         <junit.version>4.10</junit.version>
-        <kdgcommons.version>1.0.15-SNAPSHOT</kdgcommons.version>
+        <kdgcommons.version>1.0.15</kdgcommons.version>
         <log4j.version>1.2.12</log4j.version>
         <slf4j.version>1.7.8</slf4j.version>
     </properties>
@@ -40,6 +41,11 @@
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-lambda-java-log4j</artifactId>
             <version>${aws-lambda-logger.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-cognitoidp</artifactId>
+            <version>${aws-sdk.version}</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -60,6 +66,11 @@
             <groupId>net.sf.kdgcommons</groupId>
             <artifactId>kdgcommons</artifactId>
             <version>${kdgcommons.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bitbucket.b_c</groupId>
+            <artifactId>jose4j</artifactId>
+            <version>${jose4j.version}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>

@@ -1,8 +1,8 @@
 angular.module('lPhoto').
 component("confirmSignup", {
     templateUrl: "templates/confirmSignup.html",
-    controller: ['$http',
-        function ConfirmSignupController() {
+    controller: ['$http', '$location',
+        function ConfirmSignupController($http, $location) {
             console.log("ConfirmSignupController called");
 
             var self = this;
@@ -10,11 +10,47 @@ component("confirmSignup", {
             self.temporaryPassword = "";
             self.finalPassword = "";
             self.confirmationPassword = "";
+            self.passwordsDontMatch = false;
 
-            self.confirmSignup = function() {
-                console.log("confirmSignup() called: " +
+
+            self.checkPasswords = function() {
+                self.passwordsDontMatch = self.finalPassword && self.confirmationPassword
+                                          && (self.finalPassword != self.confirmationPassword);
+            }
+
+
+            self.canSubmit = function() {
+                return self.email && self.temporaryPassword && self.finalPassword && self.confirmationPassword
+                       && (self.finalPassword == self.confirmationPassword);
+            }
+
+
+            self.submit = function() {
+                console.log("confirmSignup(): " +
                             self.email + " / " + self.temporaryPassword + " / " +
                             self.finalPassword + " / " + self.confirmationPassword);
+
+                if (self.finalPassword != self.confirmationPassword) {
+                    return;
+                }
+
+                $http.post('api/confirmSignup',
+                           { "email": self.email,
+                             "temporaryPassword": self.temporaryPassword,
+                             "password": self.finalPassword})
+                .then(
+                    function(response) {
+                        if (response.data.responseCode === "SUCCESS") {
+                            console.log("got success, redirecting");
+                            $location.path("/main");
+                        }
+                        else {
+                            alert("got: " + response.data.responseCode);
+                        }
+                    },
+                    function(reason) {
+                        alert("signin failed: " + reason);
+                    });
             }
         }
     ]

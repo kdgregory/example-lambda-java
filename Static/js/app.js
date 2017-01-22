@@ -12,6 +12,9 @@ config(['$locationProvider', '$routeProvider',
       when("/confirmSignup", {
         template: "<confirm-signup></confirm-signup>"
       }).
+      when("/main", {
+        template: "<main></main>"
+      }).
       otherwise("/signin");
   }
 ]);

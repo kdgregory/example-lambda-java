@@ -26,6 +26,12 @@ BUTTON.secondaryButton {
     background-color: #90A0D0;
 }
 
+DIV.errorMessage {
+    padding: 0.5em;
+    font-weight: bold;
+    color: red;
+}
+
 DIV.loginContainer {
     position: relative;
     width: 40%;

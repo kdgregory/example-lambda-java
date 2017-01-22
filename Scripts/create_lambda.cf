@@ -14,6 +14,14 @@
         "WebappJar": {
             "Description": "Fully-qualified path to the WebApp deployment JAR",
             "Type": "String"
+        },
+        "CognitoPoolId": {
+            "Description": "Identifier for Cognito user pool",
+            "Type": "String"
+        },
+        "CognitoClientId": {
+            "Description": "Identifier for Cognito client",
+            "Type": "String"
         }
     },
 
@@ -53,6 +61,25 @@
             }
         },
 
+        "CognitoIDPConsumerUserPolicy": {
+            "Type": "AWS::IAM::ManagedPolicy",
+            "Properties": {
+                "Description": "Allows use of Cognito to manage users in a pool",
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "cognito-idp:*"
+                            ],
+                            "Resource": [ { "Fn::Sub": "arn:aws:cognito-idp:*:${AWS::AccountId}:userpool/${CognitoPoolId}" } ]
+                        }
+                    ]
+                }
+            }
+        },
+
         "WebappExecutionRole": {
             "Type": "AWS::IAM::Role",
             "DependsOn": [ "CloudwatchLoggingPolicy" ],
@@ -68,7 +95,8 @@
                     }
                 },
                 "ManagedPolicyArns": [
-                    { "Ref" : "CloudwatchLoggingPolicy" }
+                    { "Ref" : "CloudwatchLoggingPolicy" },
+                    { "Ref" : "CognitoIDPConsumerUserPolicy" }
                 ]
             }
         },
@@ -84,10 +112,16 @@
                     "S3Bucket": { "Ref": "Bucket" },
                     "S3Key":    { "Ref": "WebappJar" }
                 },
+                "Role": { "Fn::GetAtt" : [ "WebappExecutionRole", "Arn" ] },
                 "Handler": "com.kdgregory.example.javalambda.webapp.Dispatcher::handler",
                 "MemorySize": 256,
                 "Timeout": 15,
-                "Role": { "Fn::GetAtt" : [ "WebappExecutionRole", "Arn" ] }
+                "Environment": {
+                    "Variables": {
+                        "COGNITO_POOL_ID":   { "Ref": "CognitoPoolId" },
+                        "COGNITO_CLIENT_ID": { "Ref": "CognitoClientId" }
+                    }
+                }
             }
         },
 

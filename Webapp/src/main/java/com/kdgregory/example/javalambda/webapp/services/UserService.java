@@ -1,14 +1,32 @@
 // Copyright (c) Keith D Gregory, all rights reserved
 package com.kdgregory.example.javalambda.webapp.services;
 
-import java.util.UUID;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProviderClient;
+import com.amazonaws.services.cognitoidp.model.*;
 
 import net.sf.kdgcommons.lang.StringUtil;
+import net.sf.kdgcommons.lang.ThreadUtil;
+
+import org.jose4j.jwa.AlgorithmConstraints;
+import org.jose4j.jwk.HttpsJwks;
+import org.jose4j.jwt.JwtClaims;
+import org.jose4j.jwt.consumer.InvalidJwtException;
+import org.jose4j.jwt.consumer.InvalidJwtSignatureException;
+import org.jose4j.jwt.consumer.JwtConsumer;
+import org.jose4j.jwt.consumer.JwtConsumerBuilder;
+import org.jose4j.keys.resolvers.HttpsJwksVerificationKeyResolver;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.kdgregory.example.javalambda.webapp.Request;
 import com.kdgregory.example.javalambda.webapp.Response;
 import com.kdgregory.example.javalambda.webapp.ResponseCodes;
 import com.kdgregory.example.javalambda.webapp.Tokens;
+
 
 /**
  *  Manages users: sign-up (with confirmation), sign-in, and token-based
@@ -31,6 +49,111 @@ public class UserService
 //  Internals
 //----------------------------------------------------------------------------
 
+    private Logger logger = LoggerFactory.getLogger(getClass());
+
+    private AWSCognitoIdentityProviderClient cognitoClient = new AWSCognitoIdentityProviderClient();
+    private JwtConsumer jwtConsumer;
+
+
+    /**
+     *  Retrieves the Cognito User Pool ID from the environment.
+     *
+     *  @throws IllegalStateException if value is not set.
+     */
+    private String getCognitoPoolID()
+    {
+        String poolId = System.getenv("COGNITO_POOL_ID");
+        if (StringUtil.isBlank(poolId))
+            throw new IllegalArgumentException("Cognito user pool ID must be set in environment");
+        return poolId;
+    }
+
+
+    /**
+     *  Retrieves the Cognito Client ID from the environment.
+     *
+     *  @throws IllegalStateException if value is not set.
+     */
+    private String getCognitoClientID()
+    {
+        String poolId = System.getenv("COGNITO_CLIENT_ID");
+        if (StringUtil.isBlank(poolId))
+            throw new IllegalArgumentException("Cognito client ID must be set in environment");
+        return poolId;
+    }
+
+
+    /**
+     *  Extracts the tokens that we care about from an authentication result.
+     */
+    private Tokens createAuthTokens(AuthenticationResultType authResult)
+    {
+        return new Tokens(authResult.getAccessToken(), authResult.getRefreshToken());
+    }
+
+
+    /**
+     *  Returns a singleton instance of the key validator. According to http://stackoverflow.com/a/37322865
+     *  it's thread-safe, and according to https://bitbucket.org/b_c/jose4j/wiki/JWT%20Examples#markdown-header-using-an-https-jwks-endpoint
+     *  it will cache the keyspecs so we only contact Amazon the first time through.
+     *  <p>
+     *  Note: I make no attempt to ensure that only one consumer gets produced; if we have
+     *  concurrent requests, last one is retained.
+     */
+    private JwtConsumer getJwtConsumer()
+    {
+        if (jwtConsumer == null)
+        {
+            try
+            {
+                // if we're not on Lambda then the environment variable won't be set and nothing will work
+                String endpoint = String.format("https://cognito-idp.%s.amazonaws.com/%s/.well-known/jwks.json",
+                                                System.getenv("AWS_REGION"),
+                                                getCognitoPoolID());
+
+                String issuer = String.format("https://cognito-idp.%s.amazonaws.com/%s",
+                                              System.getenv("AWS_REGION"),
+                                              getCognitoPoolID());
+
+                jwtConsumer = new JwtConsumerBuilder()
+                              .setVerificationKeyResolver(new HttpsJwksVerificationKeyResolver(new HttpsJwks(endpoint)))
+                              .setJweAlgorithmConstraints(AlgorithmConstraints.DISALLOW_NONE)
+                              .setRequireExpirationTime()
+                              .setExpectedIssuer(issuer)
+                              .build();
+            }
+            catch (Exception ex)
+            {
+                logger.error("unable to create JwtConsumer", ex);
+                throw new UnhandledServiceException();
+            }
+        }
+
+        return jwtConsumer;
+    }
+
+
+    /**
+     *  Checks an access token for validity. If valid, we return the username so it can
+     *  be logged. If invalid (for whatever reason) we return null. For now, this is
+     *  sufficient as an auth check.
+     */
+    private String checkAccessToken(String accessToken)
+    throws InvalidJwtSignatureException
+    {
+        try
+        {
+            JwtClaims claims = getJwtConsumer().process(accessToken).getJwtClaims();
+            return (String)claims.getClaimValue("username");
+        }
+        catch (InvalidJwtException ignored)
+        {
+            // in practice, if we get a correctly signed token, the only reason for
+            // it to be invalid is if it's expired
+            return null;
+        }
+    }
+
 
 
 
@@ -51,7 +174,63 @@ public class UserService
      */
     public Response signIn(Request request)
     {
-        return new Response(ResponseCodes.SUCCESS, null);
+        String emailAddress = (String)request.getBody().get(ParamNames.EMAIL);
+        String password = (String)request.getBody().get(ParamNames.PASSWORD);
+        if (StringUtil.isBlank(emailAddress) || StringUtil.isBlank(password))
+        {
+            // log as warning because it ain't coming from our client
+            logger.warn("signIn: missing parameters");
+            return new Response(ResponseCodes.INVALID_REQUEST, null);
+        }
+
+        logger.debug("signIn: {}", emailAddress);
+
+        try
+        {
+            Map<String,String> authParams = new HashMap<>();
+            authParams.put("USERNAME", emailAddress);
+            authParams.put("PASSWORD", password);
+
+            AdminInitiateAuthRequest authRequest = new AdminInitiateAuthRequest()
+                    .withAuthFlow(AuthFlowType.ADMIN_NO_SRP_AUTH)
+                    .withAuthParameters(authParams)
+                    .withClientId(getCognitoClientID())
+                    .withUserPoolId(getCognitoPoolID());
+
+            AdminInitiateAuthResult authResponse = cognitoClient.adminInitiateAuth(authRequest);
+            if (StringUtil.isBlank(authResponse.getChallengeName()))
+            {
+                logger.debug("signIn: success: {}", emailAddress);
+                return new Response(createAuthTokens(authResponse.getAuthenticationResult()));
+            }
+            else if (ChallengeNameType.NEW_PASSWORD_REQUIRED.name().equals(authResponse.getChallengeName()))
+            {
+                logger.debug("signIn: attempt to sign in with temporary password: {}", emailAddress);
+                return new Response(ResponseCodes.TEMPORARY_PASSWORD, null);
+            }
+            else
+            {
+                logger.error("signIn: unexpected challenge: {}", authResponse.getChallengeName());
+                throw new UnhandledServiceException();
+            }
+        }
+        catch (UserNotFoundException ex)
+        {
+            logger.debug("signIn: user not found: {}", emailAddress);
+            return new Response(ResponseCodes.INVALID_USER, null);
+
+        }
+        catch (NotAuthorizedException ex)
+        {
+            logger.debug("signIn: invalid password: {}", emailAddress);
+            return new Response(ResponseCodes.INVALID_USER, null);
+        }
+        catch (TooManyRequestsException ex)
+        {
+            logger.warn("signIn: caught TooManyRequestsException, delaying then retrying");
+            ThreadUtil.sleepQuietly(250);
+            return signIn(request);
+        }
     }
 
 
@@ -66,7 +245,45 @@ public class UserService
      */
     public Response signUp(Request request)
     {
-        return new Response(ResponseCodes.SUCCESS, null);
+        String emailAddress = (String)request.getBody().get(ParamNames.EMAIL);
+        if (StringUtil.isBlank(emailAddress))
+        {
+            // log as warning because it ain't coming from our client
+            logger.warn("signUp: missing parameters");
+            return new Response(ResponseCodes.INVALID_REQUEST, null);
+        }
+
+        logger.debug("signUp: {}", emailAddress);
+
+        try
+        {
+            AdminCreateUserRequest cognitoRequest = new AdminCreateUserRequest()
+                    .withUserPoolId(getCognitoPoolID())
+                    .withUsername(emailAddress)
+                    .withUserAttributes(
+                            new AttributeType()
+                                .withName("email")
+                                .withValue(emailAddress),
+                            new AttributeType()
+                                .withName("email_verified")
+                                .withValue("true"))
+                    .withDesiredDeliveryMediums(DeliveryMediumType.EMAIL)
+                    .withForceAliasCreation(Boolean.FALSE);
+
+            cognitoClient.adminCreateUser(cognitoRequest);
+            return new Response(ResponseCodes.USER_CREATED, null);
+        }
+        catch (UsernameExistsException ex)
+        {
+            logger.debug("signUp: user already exists: {}", emailAddress);
+            return new Response(ResponseCodes.USER_ALREADY_EXISTS, null);
+        }
+        catch (TooManyRequestsException ex)
+        {
+            logger.warn("signUp: caught TooManyRequestsException, delaying then retrying");
+            ThreadUtil.sleepQuietly(250);
+            return signUp(request);
+        }
     }
 
 
@@ -85,7 +302,86 @@ public class UserService
      */
     public Response confirmSignUp(Request request)
     {
-        return new Response(ResponseCodes.SUCCESS, null);
+        String emailAddress = (String)request.getBody().get(ParamNames.EMAIL);
+        String tempPassword = (String)request.getBody().get(ParamNames.TEMPORARY_PASSWORD);
+        String finalPassword = (String)request.getBody().get(ParamNames.PASSWORD);
+        if (StringUtil.isBlank(emailAddress) || StringUtil.isBlank(tempPassword) || StringUtil.isBlank(finalPassword))
+        {
+            // log as warning because it ain't coming from our client
+            logger.warn("confirmSignup: missing parameters");
+            return new Response(ResponseCodes.INVALID_REQUEST, null);
+        }
+
+        logger.debug("confirmSignup: {}", emailAddress);
+
+        try
+        {
+            // must attempt signin with temporary password in order to establish session for password change
+            // (even though it's documented as not required)
+
+            Map<String,String> initialParams = new HashMap<String,String>();
+            initialParams.put("USERNAME", emailAddress);
+            initialParams.put("PASSWORD", tempPassword);
+
+            AdminInitiateAuthRequest initialRequest = new AdminInitiateAuthRequest()
+                    .withAuthFlow(AuthFlowType.ADMIN_NO_SRP_AUTH)
+                    .withAuthParameters(initialParams)
+                    .withClientId(getCognitoClientID())
+                    .withUserPoolId(getCognitoPoolID());
+
+            AdminInitiateAuthResult initialResponse = cognitoClient.adminInitiateAuth(initialRequest);
+            if (! ChallengeNameType.NEW_PASSWORD_REQUIRED.name().equals(initialResponse.getChallengeName()))
+            {
+                throw new RuntimeException(
+                    String.format("confirmSignup: unexpected challenge: {} for {}",
+                                  initialResponse.getChallengeName(), emailAddress));
+            }
+
+            Map<String,String> challengeResponses = new HashMap<String,String>();
+            challengeResponses.put("USERNAME", emailAddress);
+            challengeResponses.put("PASSWORD", tempPassword);
+            challengeResponses.put("NEW_PASSWORD", finalPassword);
+
+            AdminRespondToAuthChallengeRequest finalRequest = new AdminRespondToAuthChallengeRequest()
+                    .withChallengeName(ChallengeNameType.NEW_PASSWORD_REQUIRED)
+                    .withChallengeResponses(challengeResponses)
+                    .withClientId(getCognitoClientID())
+                    .withUserPoolId(getCognitoPoolID())
+                    .withSession(initialResponse.getSession());
+
+            AdminRespondToAuthChallengeResult challengeResponse = cognitoClient.adminRespondToAuthChallenge(finalRequest);
+            if (StringUtil.isBlank(challengeResponse.getChallengeName()))
+            {
+                logger.debug("confirmSignUp: success: {}", emailAddress);
+                return new Response(createAuthTokens(challengeResponse.getAuthenticationResult()));
+            }
+            else
+            {
+                logger.error("confirmSignUp: unexpected challenge: {}", challengeResponse.getChallengeName());
+                throw new UnhandledServiceException();
+            }
+        }
+        catch (InvalidPasswordException ex)
+        {
+            logger.debug("confirmSignup: invalid password for {}", emailAddress);
+            return new Response(ResponseCodes.INVALID_PASSWORD);
+        }
+        catch (UserNotFoundException ex)
+        {
+            logger.debug("confirmSignup: user not found: {}", emailAddress);
+            return new Response(ResponseCodes.INVALID_USER, null);
+        }
+        catch (NotAuthorizedException ex)
+        {
+            logger.debug("confirmSignup: invalid password: {}", emailAddress);
+            return new Response(ResponseCodes.INVALID_USER, null);
+        }
+        catch (TooManyRequestsException ex)
+        {
+            logger.warn("confirmSignup: caught TooManyRequestsException, delaying then retrying");
+            ThreadUtil.sleepQuietly(250);
+            return confirmSignUp(request);
+        }
     }
 
 
@@ -99,18 +395,88 @@ public class UserService
      *  caller should merge the tokens from this response with the response from the
      *  authenticated method.
      */
-    public Response authenticate(Request request)
+    public Response checkAuthorization(Request request)
     {
         String accessToken = request.getTokens().getAccessToken();
         String refreshToken = request.getTokens().getRefreshToken();
 
-//        if (StringUtil.isBlank(accessToken) || StringUtil.isBlank(refreshToken))
-//            return new Response(ResponseCodes.NOT_AUTHENTICATED);
+        if (StringUtil.isBlank(accessToken) || StringUtil.isBlank(refreshToken))
+            return new Response(ResponseCodes.NOT_AUTHENTICATED);
 
-        // TODO - check authentication and potentially get a new set of tokens
-        //        for now I'm going to return a response with a dummy access token
+        // first try to validate the access token
+        try
+        {
+            String username = checkAccessToken(accessToken);
+            if (username != null)
+            {
+                logger.debug("checkAuthorization: success: {}", username);
+                return new Response(ResponseCodes.SUCCESS);
+            }
+            else
+            {
+                return attemptRefresh(request, refreshToken);
+            }
+        }
+        catch (InvalidJwtSignatureException ex)
+        {
+            // this might fill up the logs on a DOS attack, but I think it's useful for review
+            logger.debug("checkAuthorization: invalid access token: {}", accessToken);
+            return new Response(ResponseCodes.NOT_AUTHENTICATED);
+        }
+    }
 
-        Tokens tokens = new Tokens(UUID.randomUUID().toString(), null);
-        return new Response(tokens);
+
+    /**
+     *  This handles the refresh logic. It's separate from authenticate() because otherwise
+     *  the indentation would grow too large. I'm keeping them physically close, however.
+     */
+    private Response attemptRefresh(Request request, String refreshToken)
+    {
+        logger.debug("attemptRefresh: starting");
+        try
+        {
+            Map<String,String> authParams = new HashMap<String,String>();
+            authParams.put("REFRESH_TOKEN", refreshToken);
+
+            AdminInitiateAuthRequest refreshRequest = new AdminInitiateAuthRequest()
+                                              .withAuthFlow(AuthFlowType.REFRESH_TOKEN)
+                                              .withAuthParameters(authParams)
+                                              .withClientId(getCognitoClientID())
+                                              .withUserPoolId(getCognitoPoolID());
+
+            AdminInitiateAuthResult refreshResponse = cognitoClient.adminInitiateAuth(refreshRequest);
+            if (StringUtil.isBlank(refreshResponse.getChallengeName()))
+            {
+                AuthenticationResultType authResult = refreshResponse.getAuthenticationResult();
+                String username = checkAccessToken(authResult.getAccessToken());
+                if (username != null)
+                {
+                    logger.debug("attemptRefresh: success: {}", username);
+                    return new Response(createAuthTokens(authResult));
+                }
+                else
+                {
+                    // this should never happen
+                    logger.warn("attemptRefresh: unable to get username after successful refresh: {}", authResult.getAccessToken());
+                    return new Response(ResponseCodes.NOT_AUTHENTICATED);
+                }
+            }
+            else
+            {
+                logger.warn("attemptRefresh: unexpected challenge: {}", refreshResponse.getChallengeName());
+                throw new UnhandledServiceException();
+            }
+        }
+        catch (TooManyRequestsException ex)
+        {
+            logger.warn("attemptRefresh: caught TooManyRequestsException, delaying then retrying");
+            ThreadUtil.sleepQuietly(250);
+            return attemptRefresh(request, refreshToken);
+        }
+        catch (Exception ex)
+        {
+            logger.error("attemptRefresh: unexpected exception", ex);
+            throw new UnhandledServiceException();
+        }
     }
 }

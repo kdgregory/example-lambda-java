@@ -6,11 +6,14 @@
 <form name="signin" action="#">
     <table class="login">
     <tr><th><label for="EMAIL">Email address:</label></th>
-        <td><input name="EMAIL" type="email" size=40 maxlength=128 autofocus="true" ng-model="$ctrl.signinEmail"></input>
+        <td><input name="EMAIL" type="email" size=40 maxlength=128 autofocus="true" ng-model="$ctrl.signinEmail"></input></td>
+        </tr>
     <tr><th><label for="PASSWORD">Password:</label></th>
-        <td><input name="PASSWORD" type="password" ng-model="$ctrl.signinPassword"></input>
+        <td><input name="PASSWORD" type="password" ng-model="$ctrl.signinPassword"></input></td>
+        </tr>
     <tr><td>&nbsp;</td>
-        <td> <button type="button" class="preferredButton" ng-click="$ctrl.submitSignin()">Sign In</button> </td>
+        <td> <button type="button" class="preferredButton" ng-click="$ctrl.submitSignin()" ng-disabled="! $ctrl.canSubmitSignin()">Sign In</button> </td>
+        </tr>
     </table>
 </form>
 
@@ -21,9 +24,11 @@
 <form name="signup" action="#">
     <table class="login">
     <tr><th><label for="EMAIL">Email address:</label></th>
-        <td><input name="EMAIL" type="email" size=40 maxlength=128 ng-model="$ctrl.signupEmail"></input>
+        <td><input name="EMAIL" type="email" size=40 maxlength=128 ng-model="$ctrl.signupEmail"></input></td>
+        </tr>
     <tr><td>&nbsp;</td>
-        <td> <button type="button" class="secondaryButton" ng-click="$ctrl.submitSignup()">Sign Up</button> </td>
+        <td> <button type="button" class="secondaryButton" ng-click="$ctrl.submitSignup()" ng-disabled="! $ctrl.canSubmitSignup()">Sign Up</button> </td>
+        </tr>
     </table>
 </form>
 </div>

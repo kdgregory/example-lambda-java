@@ -7,9 +7,15 @@ package com.kdgregory.example.javalambda.webapp;
  */
 public enum ResponseCodes
 {
-    SUCCESS             (""),
-    INVALID_OPERATION   ("Unsupported operation"),
-    NOT_AUTHENTICATED   ("The user did not provide valid authentication tokens");
+    SUCCESS                 (""),
+    INVALID_OPERATION       ("Unsupported operation"),
+    INVALID_REQUEST         ("The request is missing needed fields"),
+    NOT_AUTHENTICATED       ("The user did not provide valid authentication tokens"),
+    INVALID_USER            ("Incorrect username or password"),
+    TEMPORARY_PASSWORD      ("Attempted to login with temporary password; need to confirm signup"),
+    USER_CREATED            ("User creation initiated; move on to confirmation"),
+    USER_ALREADY_EXISTS     ("A user with this email address already exists"),
+    INVALID_PASSWORD        ("Password does not meeet validation requirements (mix of numbers, upper and lower case letters)");
 
     private String description;
 

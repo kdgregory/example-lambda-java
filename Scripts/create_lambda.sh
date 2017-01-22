@@ -26,6 +26,8 @@ set -e
 
 BASE_NAME=$1
 BUCKET_NAME=$2
+COGNITO_POOL_ID=$3
+COGNITO_CLIENT_ID=$4
 
 
 cat > ${TMPDIR}/create_lambda_params.json <<EOF
@@ -41,6 +43,14 @@ cat > ${TMPDIR}/create_lambda_params.json <<EOF
   {
     "ParameterKey":     "WebappJar",
     "ParameterValue":   "${DEPLOYMENT_PREFIX}/${WEBAPP_FILE}"
+  },
+  {
+    "ParameterKey":     "CognitoPoolId",
+    "ParameterValue":   "${COGNITO_POOL_ID}"
+  },
+  {
+    "ParameterKey":     "CognitoClientId",
+    "ParameterValue":   "${COGNITO_CLIENT_ID}"
   }
 ]
 EOF

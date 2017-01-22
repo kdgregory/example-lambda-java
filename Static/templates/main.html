@@ -1,0 +1,14 @@
+<div id = "main" class="main">
+
+    You've arrived at the main page.
+
+    <p ng-if="$ctrl.checking">
+        Checking authorization ...
+    
+    <p ng-if="$ctrl.authorized">
+        You are authorized to be here!
+
+    <p ng-if="(! $ctrl.checking) && (! $ctrl.authorized)">
+        You are NOT authorized to be here, please <a href="#/signin">sign in</a>
+
+</div>

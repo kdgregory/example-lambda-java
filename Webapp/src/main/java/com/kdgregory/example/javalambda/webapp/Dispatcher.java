@@ -9,6 +9,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.kdgregory.example.javalambda.webapp.services.UnhandledServiceException;
 import com.kdgregory.example.javalambda.webapp.services.UserService;
 
 import org.slf4j.Logger;
@@ -80,7 +81,7 @@ public class Dispatcher
             case RequestActions.CONFIRM_SIGNUP :
                 return cognitoService.confirmSignUp(request);
             case RequestActions.CHECK_AUTH :
-                return cognitoService.authenticate(request);
+                return cognitoService.checkAuthorization(request);
             default:
                 return new Response(404);
         }
@@ -135,9 +136,13 @@ public class Dispatcher
             logger.warn(ex.getMessage());
             return buildResponseMap(new Response(400));
         }
+        catch (UnhandledServiceException ignored)
+        {
+            return buildResponseMap(new Response(500));
+        }
         catch (Exception ex)
         {
-            logger.warn("unexpected exception during request processing", ex);
+            logger.error("unexpected exception during request processing", ex);
             return buildResponseMap(new Response(500));
         }
     }
