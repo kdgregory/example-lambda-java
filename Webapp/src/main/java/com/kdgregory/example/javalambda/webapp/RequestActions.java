@@ -7,6 +7,13 @@ package com.kdgregory.example.javalambda.webapp;
  */
 public class RequestActions
 {
+    // handled by PhotoService
+
+    public final static String  LIST            = "list";
+    public final static String  UPLOAD          = "upload";
+
+    // handled by UserService
+
     public final static String  SIGNIN          = "signin";
     public final static String  SIGNUP          = "signup";
     public final static String  CONFIRM_SIGNUP  = "confirmSignup";

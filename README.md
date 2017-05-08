@@ -68,18 +68,18 @@ The Java components are built using Maven, with all dependencies available from 
 Deploying the application is a multi-step process. Parts are handled by CloudFormation, and parts are handled by shell scripts.
 Run all scripts from the project root directory
 
-1. Create the bucket and deploy the static files and web-app.      
+1. Create the bucket and deploy the static files and web-app.
     ```
     Scripts/create_bucket.sh BUCKET_NAME
     ```
 
     Invoke with the name of the bucket that you want to use. If the bucket already exists, the existing
     files in the deployment and static directories will be removed before the new files are uploaded.
-    
+
     This script will look in your local Maven repository to find the deployment JARs for Lambda, so you
     must have built those JARs before running it.
 
-2. Create the Cognito user pool.  
+2. Create the Cognito user pool.
 
     ```
     Scripts/create_cognito.sh POOL_NAME
@@ -87,24 +87,24 @@ Run all scripts from the project root directory
 
     This script will create the pool and also a single client application with the same name. The pool will apply
     some basic password rules: a mix of uppercase, lowercase, and numbers, with at least 8 characters.
-    
+
     When you run the script it will output the pool ID and client ID; you'll need these for the final step.
-    
-3. Create the database and plumbing  
+
+3. Create the database and plumbing
 
     ** this step isn't currently supported **
 
     ```
     insert script here
     ```
-    
+
     This script runs a CloudFormation template to create the "unchanging" infrastructure (versus the API Gateway
     and Lambda procs, which you might wish to change). It will output some IDs that you need for the next step.
-    
+
 4. Create the API Gateway and Lambda procs.
 
     ```
-    create_lambda.sh BASE_NAME BUCKET_NAME POOL_ID CLIENT_ID
+    Scripts/create_lambda.sh BASE_NAME BUCKET_NAME POOL_ID CLIENT_ID
     ```
 
 

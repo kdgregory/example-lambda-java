@@ -1,0 +1,23 @@
+<div id = "upload" class="formContainer">
+
+    <table id="uploadFormContainer">
+    <tr><th> <label for="FILE_TO_UPLOAD"> Select your image file: </label> </th>
+        <td> <input name="FILE_TO_UPLOAD" type="file" id="fileChooser"/> </td>
+        </tr>
+    <tr ng-if="$ctrl.fileDataUrl">
+        <td> &nbsp; </td>
+        <td> <img src="{{$ctrl.fileDataUrl}}" height="200" width="300" /> </td>
+        </tr>
+    <tr><th> <label for="FILENAME"> File name: </label> </th>
+        <td> <input name="FILENAME" type="text"/ ng-model="$ctrl.fileName"> </td>
+        </tr>
+    <tr><th> <label for="DESCRIPTION"> Description: </label> </th>
+        <td> <textarea name="DESCRIPTION" lines="6" cols="40" ng-model="$ctrl.description"></textarea> </td>
+        </tr>
+    <tr><th> &nbsp; </th>
+        <td> <button type="button" class="CancelButton" ng-click="$ctrl.doCancel()"> Cancel </button> </td>
+        <td> <button type="button" class="preferredButton" ng-click="$ctrl.doUpload()" ng-disabled="! $ctrl.canDoUpload()"> Upload </button> </td>
+        </tr>
+    </table>
+
+</div>

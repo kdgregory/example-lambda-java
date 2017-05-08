@@ -9,6 +9,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.kdgregory.example.javalambda.webapp.services.PhotoService;
 import com.kdgregory.example.javalambda.webapp.services.UnhandledServiceException;
 import com.kdgregory.example.javalambda.webapp.services.UserService;
 
@@ -20,14 +21,16 @@ import net.sf.kdgcommons.collections.CollectionUtil;
 
 
 /**
- *  A simple Java handler to verify plumbing.
+ *  Lambda handler: receives the request, extracts the information that we care
+ *  about, calls a service method, and then packages the results.
  */
 public class Dispatcher
 {
     private Logger logger = LoggerFactory.getLogger(getClass());
 
     private ObjectMapper mapper = new ObjectMapper();
-    private UserService cognitoService = new UserService();
+    private UserService userService = new UserService();
+    private PhotoService photoService = new PhotoService();
 
 
     /**
@@ -75,13 +78,17 @@ public class Dispatcher
         switch (request.getAction())
         {
             case RequestActions.SIGNIN :
-                return cognitoService.signIn(request);
+                return userService.signIn(request);
             case RequestActions.SIGNUP :
-                return cognitoService.signUp(request);
+                return userService.signUp(request);
             case RequestActions.CONFIRM_SIGNUP :
-                return cognitoService.confirmSignUp(request);
+                return userService.confirmSignUp(request);
             case RequestActions.CHECK_AUTH :
-                return cognitoService.checkAuthorization(request);
+                return userService.checkAuthorization(request);
+            case RequestActions.LIST :
+                return photoService.listPhotos(request);
+            case RequestActions.UPLOAD :
+                return photoService.upload(request);
             default:
                 return new Response(404);
         }

@@ -15,6 +15,9 @@ config(['$locationProvider', '$routeProvider',
       when("/main", {
         template: "<main></main>"
       }).
+      when("/upload", {
+        template: "<upload></upload>"
+      }).
       otherwise("/signin");
   }
 ]);

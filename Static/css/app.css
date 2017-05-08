@@ -32,22 +32,45 @@ DIV.errorMessage {
     color: red;
 }
 
-DIV.loginContainer {
+DIV.bordered {
+    margin: 1em;
+    border: 1px solid black;
+}
+
+DIV.formContainer {
     position: relative;
     width: 40%;
     left: 25%;
     padding: 1em;
 }
 
-.loginContainer TH {
+.formContainer TH {
     padding: 0.25em;
     text-align: left;
 }
 
-.loginContainer TD {
+.formContainer TD {
     padding: 0.25em;
 }
 
-.loginContainer .actionDesc {
+.formContainer .actionDesc {
     margin-top: 4em;
+}
+
+DIV.listContainer {
+    position: relative;
+    width: 60%;
+    left: 15%;
+    padding: 1em;
+}
+
+TABLE.photoList {
+}
+
+TABLE.photoList TR {
+}
+
+TABLE.photoList TD {
+    padding: 1em;
+    vertical-align: top;
 }

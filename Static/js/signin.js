@@ -48,13 +48,11 @@ component("signin", {
 
             self.submitSignup = function() {
                 console.log("submitSignup(): " + self.signupEmail);
-                $http.post('api/signup',
-                           { "email": self.signupEmail })
+                $http.post('api/signup', { "email": self.signupEmail })
                 .then(
                     function(response) {
                         if (response.data.responseCode === "USER_CREATED") {
                             console.log("got success, redirecting");
-                            $location.path("/confirmSignup");
                         }
                         else {
                             alert("got: " + response.data.responseCode);
@@ -63,6 +61,7 @@ component("signin", {
                     function(reason) {
                         alert("signin failed: " + reason);
                     });
+                $location.path("/confirmSignup");
             }
         }
     ]

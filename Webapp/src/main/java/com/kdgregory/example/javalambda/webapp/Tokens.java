@@ -21,8 +21,8 @@ public class Tokens
 
     private String accessToken;
     private String refreshToken;
-    
-    
+
+
     /**
      *  Constructs an empty instance. This is used as a placeholder in the response.
      */

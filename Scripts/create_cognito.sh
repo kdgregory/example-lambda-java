@@ -49,9 +49,9 @@ EOF
 
 cat > /tmp/$$-clientdef.json <<EOF
 {
-    "GenerateSecret": false, 
-    "RefreshTokenValidity": 0, 
-    "ReadAttributes": [], 
+    "GenerateSecret": false,
+    "RefreshTokenValidity": 0,
+    "ReadAttributes": [],
     "WriteAttributes": [],
     "ExplicitAuthFlows": [ "ADMIN_NO_SRP_AUTH" ]
 }

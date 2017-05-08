@@ -36,53 +36,9 @@
             }
         },
 
-        "CloudwatchLoggingPolicy": {
-            "Type": "AWS::IAM::ManagedPolicy",
-            "Properties": {
-                "Description": "Allows creation of a logstream and writing of logging events",
-                "PolicyDocument": {
-                    "Version": "2012-10-17",
-                    "Statement": [
-                        {
-                            "Effect":   "Allow",
-                            "Action":   [ "logs:CreateLogGroup" ],
-                            "Resource": [ { "Fn::Sub": "arn:aws:logs:*:${AWS::AccountId}:*" } ]
-                        },
-                        {
-                            "Effect": "Allow",
-                            "Action": [
-                                "logs:CreateLogStream",
-                                "logs:PutLogEvents"
-                            ],
-                            "Resource": [ { "Fn::Sub": "arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/lambda/${BaseName}-Webapp:*" } ]
-                        }
-                    ]
-                }
-            }
-        },
-
-        "CognitoIDPConsumerUserPolicy": {
-            "Type": "AWS::IAM::ManagedPolicy",
-            "Properties": {
-                "Description": "Allows use of Cognito to manage users in a pool",
-                "PolicyDocument": {
-                    "Version": "2012-10-17",
-                    "Statement": [
-                        {
-                            "Effect": "Allow",
-                            "Action": [
-                                "cognito-idp:*"
-                            ],
-                            "Resource": [ { "Fn::Sub": "arn:aws:cognito-idp:*:${AWS::AccountId}:userpool/${CognitoPoolId}" } ]
-                        }
-                    ]
-                }
-            }
-        },
 
         "WebappExecutionRole": {
             "Type": "AWS::IAM::Role",
-            "DependsOn": [ "CloudwatchLoggingPolicy" ],
             "Properties": {
                 "RoleName": { "Fn::Sub": "${BaseName}-WebappExecutionRole" },
                 "Path": "/service-role/",
@@ -94,9 +50,58 @@
                         "Principal": { "Service": [ "lambda.amazonaws.com" ] }
                     }
                 },
-                "ManagedPolicyArns": [
-                    { "Ref" : "CloudwatchLoggingPolicy" },
-                    { "Ref" : "CognitoIDPConsumerUserPolicy" }
+                "Policies": [
+                    {
+                        "PolicyName":       { "Fn::Sub": "${BaseName}-LambdaCloudwatchPolicy" },
+                        "PolicyDocument":   {
+                            "Version":      "2012-10-17",
+                            "Statement":    [
+                                                {
+                                                    "Effect":   "Allow",
+                                                    "Action":   [ "logs:CreateLogGroup" ],
+                                                    "Resource": [ { "Fn::Sub": "arn:aws:logs:*:${AWS::AccountId}:*" } ]
+                                                },
+                                                {
+                                                    "Effect": "Allow",
+                                                    "Action": [
+                                                        "logs:CreateLogStream",
+                                                        "logs:PutLogEvents"
+                                                    ],
+                                                    "Resource": [ { "Fn::Sub": "arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/lambda/${BaseName}-Webapp:*" } ]
+                                                }
+                                            ]
+                        }
+                    }, {
+                        "PolicyName":       { "Fn::Sub": "${BaseName}-LambdaCognitoPolicy" },
+                        "PolicyDocument":   {
+                            "Version":      "2012-10-17",
+                            "Statement":    [
+                                                {
+                                                    "Effect": "Allow",
+                                                    "Action": [
+                                                        "cognito-idp:*"
+                                                    ],
+                                                    "Resource": [ { "Fn::Sub": "arn:aws:cognito-idp:*:${AWS::AccountId}:userpool/${CognitoPoolId}" } ]
+                                                }
+                                            ]
+                        }
+                    }, {
+                        "PolicyName":       { "Fn::Sub": "${BaseName}-LambdaBucketPolicy" },
+                        "PolicyDocument":   {
+                            "Version" :     "2012-10-17",
+                            "Statement":    [
+                                                {
+                                                    "Effect":   "Allow",
+                                                    "Action":   [ "s3:List*" ],
+                                                    "Resource": { "Fn::Sub": "arn:aws:s3:::${Bucket}" }
+                                                },{
+                                                    "Effect":   "Allow",
+                                                    "Action":   [ "s3:Get*", "s3:Put*" ],
+                                                    "Resource": { "Fn::Sub": "arn:aws:s3:::${Bucket}/images/*" }
+                                                }
+                                            ]
+                        }
+                    }
                 ]
             }
         },
@@ -115,11 +120,13 @@
                 "Role": { "Fn::GetAtt" : [ "WebappExecutionRole", "Arn" ] },
                 "Handler": "com.kdgregory.example.javalambda.webapp.Dispatcher::handler",
                 "MemorySize": 256,
-                "Timeout": 15,
+                "Timeout": 30,
                 "Environment": {
                     "Variables": {
                         "COGNITO_POOL_ID":   { "Ref": "CognitoPoolId" },
-                        "COGNITO_CLIENT_ID": { "Ref": "CognitoClientId" }
+                        "COGNITO_CLIENT_ID": { "Ref": "CognitoClientId" },
+                        "S3_IMAGE_BUCKET":   { "Ref": "Bucket" },
+                        "S3_IMAGE_PREFIX":   "images"
                     }
                 }
             }
@@ -148,16 +155,18 @@
                         "Principal": { "Service": [ "apigateway.amazonaws.com" ] }
                     }
                 },
-                "Policies": [ {
-                    "PolicyName":       { "Fn::Sub": "${BaseName}-GatewayBucketPolicy" },
-                    "PolicyDocument": {
-                        "Version" :     "2012-10-17",
-                        "Statement": [{
-                            "Effect":   "Allow",
-                            "Action":   [ "s3:GetObject" ],
-                            "Resource": { "Fn::Sub": "arn:aws:s3:::${Bucket}/*" }
-                        }]
-                    }}
+                "Policies": [
+                    {
+                        "PolicyName":       { "Fn::Sub": "${BaseName}-GatewayBucketPolicy" },
+                        "PolicyDocument": {
+                            "Version" :     "2012-10-17",
+                            "Statement": [{
+                                "Effect":   "Allow",
+                                "Action":   [ "s3:Get*" ],
+                                "Resource": { "Fn::Sub": "arn:aws:s3:::${Bucket}/*" }
+                            }]
+                        }
+                    }
                 ]
             }
         },
@@ -165,269 +174,251 @@
         "Gateway": {
             "Type":             "AWS::ApiGateway::RestApi",
             "Properties": {
-                "Name":         { "Fn::Sub": "${BaseName}" },
-                "Description":  "A photo-sharing API fronting Lambda and S3"
-            }
-        },
-
-        "GatewayAPIPathRoot": {
-            "Type":             "AWS::ApiGateway::Resource",
-            "Properties": {
-                "RestApiId":    { "Ref": "Gateway" },
-                "ParentId":     { "Fn::GetAtt": ["Gateway", "RootResourceId"] },
-                "PathPart":     "api"
-            }
-        },
-
-        "GatewayAPIPathAction": {
-            "Type":             "AWS::ApiGateway::Resource",
-            "Properties": {
-                "RestApiId":    { "Ref": "Gateway" },
-                "ParentId":     { "Ref": "GatewayAPIPathRoot" },
-                "PathPart":     "{action}"
-            }
-        },
-
-        "GatewayAPIMethod": {
-            "Type":                 "AWS::ApiGateway::Method",
-            "DependsOn":            [ "Gateway", "WebappLambdaFunction" ],
-            "Properties": {
-                "RestApiId":        { "Ref": "Gateway" },
-                "ResourceId":       { "Ref": "GatewayAPIPathAction" },
-                "HttpMethod":       "POST",
-                "AuthorizationType": "NONE",
-                "RequestParameters": {
-                    "method.request.path.action": true
-                },
-                "Integration": {
-                    "IntegrationHttpMethod":    "POST",
-                    "Type":                     "AWS_PROXY",
-                    "Uri":                      { "Fn::Join": ["", [
-                                                    "arn:aws:apigateway:",
-                                                    { "Ref" : "AWS::Region" },
-                                                    ":lambda:path/2015-03-31/functions/",
-                                                    { "Fn::GetAtt": ["WebappLambdaFunction", "Arn"] },
-                                                    "/invocations"
-                                                ]]}
-                },
-                "MethodResponses": [
-                    {
-                        "StatusCode":               "200",
-                        "ResponseModels": {
-                            "application/json":     "Empty"
-                        }
-                    }
-                ]
-            }
-        },
-
-        "GatewayRootGet": {
-            "Type":                             "AWS::ApiGateway::Method",
-            "DependsOn":                        [ "Gateway" ],
-            "Properties": {
-                "RestApiId":                    { "Ref": "Gateway" },
-                "ResourceId":                   { "Fn::GetAtt": ["Gateway", "RootResourceId"] },
-                "HttpMethod":                   "GET",
-                "AuthorizationType":            "NONE",
-                "Integration": {
-                    "IntegrationHttpMethod":    "GET",
-                    "Type":                     "AWS",
-                    "Uri":                      { "Fn::Join": ["", [
-                                                    "arn:aws:apigateway:",
-                                                    { "Ref" : "AWS::Region" },
-                                                    { "Fn::Sub": ":s3:path/${Bucket}/static/index.html" }
-                                                ]]},
-                    "Credentials":              {"Fn::GetAtt" : ["GatewayBucketRole", "Arn"] },
-                    "IntegrationResponses":     [
-                                                    { "StatusCode": "200" }
-                                                ],
-                    "PassthroughBehavior":      "WHEN_NO_MATCH"
-                },
-                "MethodResponses": [
-                    {
-                        "StatusCode":           "200",
-                        "ResponseModels": {
-                            "text/html":  "Empty"
-                        }
-                    }
-                ]
-            }
-        },
-
-        "GatewayStaticPathCSS": {
-            "Type":             "AWS::ApiGateway::Resource",
-            "Properties": {
-                "RestApiId":    { "Ref": "Gateway" },
-                "ParentId":     { "Fn::GetAtt": ["Gateway", "RootResourceId"] },
-                "PathPart":     "css"
-            }
-        },
-
-        "GatewayStaticPathCSSFile": {
-            "Type":             "AWS::ApiGateway::Resource",
-            "Properties": {
-                "RestApiId":    { "Ref": "Gateway" },
-                "ParentId":     { "Ref": "GatewayStaticPathCSS" },
-                "PathPart":     "{file}"
-            }
-        },
-
-        "GatewayStaticPathCSSFileGet": {
-            "Type":                             "AWS::ApiGateway::Method",
-            "DependsOn":                        [ "Gateway" ],
-            "Properties": {
-                "RestApiId":                    { "Ref": "Gateway" },
-                "ResourceId":                   { "Ref": "GatewayStaticPathCSSFile" },
-                "HttpMethod":                   "GET",
-                "AuthorizationType":            "NONE",
-                "RequestParameters":            {
-                                                "method.request.path.file": true
-                },
-                "Integration":                  {
-                    "IntegrationHttpMethod":    "GET",
-                    "Type":                     "AWS",
-                    "Uri":                      { "Fn::Join": ["", [
-                                                    "arn:aws:apigateway:",
-                                                    { "Ref" : "AWS::Region" },
-                                                    { "Fn::Sub": ":s3:path/${Bucket}/static/css/{file}" }
-                                                ]]},
-                    "RequestParameters":        { 
+                "Name":             { "Fn::Sub": "${BaseName}" },
+                "Description":      "A photo-sharing API fronting Lambda and S3",
+                "Body":             {
+                                      "swagger": "2.0",
+                                      "paths": {
+                                        "/": {
+                                          "get": {
+                                            "produces": [
+                                              "text/html"
+                                            ],
+                                            "responses": {
+                                              "200": {
+                                                "description": "200 response",
+                                                "schema": {
+                                                  "$ref": "#/definitions/Empty"
+                                                }
+                                              }
+                                            },
+                                            "x-amazon-apigateway-integration": {
+                                              "credentials": "arn:aws:iam::717623742438:role/service-role/LambdaPhoto-GatewayBucketRole",
+                                              "responses": {
+                                                "default": {
+                                                  "statusCode": "200"
+                                                }
+                                              },
+                                              "uri": "arn:aws:apigateway:us-east-1:s3:path/com-kdgregory-example/static/index.html",
+                                              "passthroughBehavior": "when_no_match",
+                                              "httpMethod": "GET",
+                                              "type": "aws"
+                                            }
+                                          }
+                                        },
+                                        "/api/{action}": {
+                                          "post": {
+                                            "produces": [
+                                              "application/json"
+                                            ],
+                                            "parameters": [
+                                              {
+                                                "name": "action",
+                                                "in": "path",
+                                                "required": true,
+                                                "type": "string"
+                                              }
+                                            ],
+                                            "responses": {
+                                              "200": {
+                                                "description": "200 response",
+                                                "schema": {
+                                                  "$ref": "#/definitions/Empty"
+                                                }
+                                              }
+                                            },
+                                            "x-amazon-apigateway-integration": {
+                                              "uri": "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:717623742438:function:LambdaPhoto-Webapp/invocations",
+                                              "passthroughBehavior": "when_no_match",
+                                              "httpMethod": "POST",
+                                              "type": "aws_proxy"
+                                            }
+                                          }
+                                        },
+                                        "/css/{file}": {
+                                          "get": {
+                                            "produces": [
+                                              "text/css"
+                                            ],
+                                            "parameters": [
+                                              {
+                                                "name": "file",
+                                                "in": "path",
+                                                "required": true,
+                                                "type": "string"
+                                              }
+                                            ],
+                                            "responses": {
+                                              "200": {
+                                                "description": "200 response",
+                                                "schema": {
+                                                  "$ref": "#/definitions/Empty"
+                                                }
+                                              }
+                                            },
+                                            "x-amazon-apigateway-integration": {
+                                              "credentials": "arn:aws:iam::717623742438:role/service-role/LambdaPhoto-GatewayBucketRole",
+                                              "responses": {
+                                                "default": {
+                                                  "statusCode": "200"
+                                                }
+                                              },
+                                              "requestParameters": {
                                                 "integration.request.path.file": "method.request.path.file"
+                                              },
+                                              "uri": "arn:aws:apigateway:us-east-1:s3:path/com-kdgregory-example/static/css/{file}",
+                                              "passthroughBehavior": "when_no_templates",
+                                              "httpMethod": "GET",
+                                              "type": "aws"
+                                            }
+                                          }
+                                        },
+                                        "/images/{file}": {
+                                          "get": {
+                                            "produces": [
+                                              "image/jpeg",
+                                              "image/png",
+                                              "image/gif"
+                                            ],
+                                            "parameters": [
+                                              {
+                                                "name": "file",
+                                                "in": "path",
+                                                "required": true,
+                                                "type": "string"
+                                              }
+                                            ],
+                                            "responses": {
+                                              "200": {
+                                                "description": "200 response",
+                                                "schema": {
+                                                  "$ref": "#/definitions/Empty"
                                                 },
-                    "Credentials":              {"Fn::GetAtt" : ["GatewayBucketRole", "Arn"] },
-                    "IntegrationResponses":     [
-                                                    { "StatusCode": "200" }
-                                                ],
-                    "PassthroughBehavior":      "WHEN_NO_MATCH"
-                },
-                "MethodResponses": [
-                    {
-                        "StatusCode":           "200",
-                        "ResponseModels": {
-                            "text/css":  "Empty"
-                        }
-                    }
-                ]
-            }
-        },
-
-        "GatewayStaticPathJS": {
-            "Type":             "AWS::ApiGateway::Resource",
-            "Properties": {
-                "RestApiId":    { "Ref": "Gateway" },
-                "ParentId":     { "Fn::GetAtt": ["Gateway", "RootResourceId"] },
-                "PathPart":     "js"
-            }
-        },
-
-        "GatewayStaticPathJSFile": {
-            "Type":             "AWS::ApiGateway::Resource",
-            "Properties": {
-                "RestApiId":    { "Ref": "Gateway" },
-                "ParentId":     { "Ref": "GatewayStaticPathJS" },
-                "PathPart":     "{file}"
-            }
-        },
-
-        "GatewayStaticPathJSFileGet": {
-            "Type":                             "AWS::ApiGateway::Method",
-            "DependsOn":                        [ "Gateway" ],
-            "Properties": {
-                "RestApiId":                    { "Ref": "Gateway" },
-                "ResourceId":                   { "Ref": "GatewayStaticPathJSFile" },
-                "HttpMethod":                   "GET",
-                "AuthorizationType":            "NONE",
-                "RequestParameters":            {
-                                                "method.request.path.file": true
-                },
-                "Integration":                  {
-                    "IntegrationHttpMethod":    "GET",
-                    "Type":                     "AWS",
-                    "Uri":                      { "Fn::Join": ["", [
-                                                    "arn:aws:apigateway:",
-                                                    { "Ref" : "AWS::Region" },
-                                                    { "Fn::Sub": ":s3:path/${Bucket}/static/js/{file}" }
-                                                ]]},
-                    "RequestParameters":        { 
+                                                "headers": {
+                                                  "Content-Type": {
+                                                    "type": "string"
+                                                  },
+                                                  "ETag": {
+                                                    "type": "string"
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            "x-amazon-apigateway-integration": {
+                                              "credentials": "arn:aws:iam::717623742438:role/service-role/LambdaPhoto-GatewayBucketRole",
+                                              "responses": {
+                                                "default": {
+                                                  "statusCode": "200",
+                                                  "responseParameters": {
+                                                    "method.response.header.Content-Type": "integration.response.header.Content-Type",
+                                                    "method.response.header.ETag": "integration.response.header.ETag"
+                                                  },
+                                                  "contentHandling": "CONVERT_TO_BINARY"
+                                                }
+                                              },
+                                              "requestParameters": {
                                                 "integration.request.path.file": "method.request.path.file"
-                                                },
-                    "Credentials":              {"Fn::GetAtt" : ["GatewayBucketRole", "Arn"] },
-                    "IntegrationResponses":     [
-                                                    { "StatusCode": "200" }
-                                                ],
-                    "PassthroughBehavior":      "WHEN_NO_MATCH"
-                },
-                "MethodResponses": [
-                    {
-                        "StatusCode":           "200",
-                        "ResponseModels": {
-                            "text/javascript":  "Empty"
-                        }
-                    }
-                ]
-            }
-        },
-
-        "GatewayStaticPathTemplates": {
-            "Type":             "AWS::ApiGateway::Resource",
-            "Properties": {
-                "RestApiId":    { "Ref": "Gateway" },
-                "ParentId":     { "Fn::GetAtt": ["Gateway", "RootResourceId"] },
-                "PathPart":     "templates"
-            }
-        },
-
-        "GatewayStaticPathTemplatesFile": {
-            "Type":             "AWS::ApiGateway::Resource",
-            "Properties": {
-                "RestApiId":    { "Ref": "Gateway" },
-                "ParentId":     { "Ref": "GatewayStaticPathTemplates" },
-                "PathPart":     "{file}"
-            }
-        },
-
-        "GatewayStaticPathTemplatesFileGet": {
-            "Type":                             "AWS::ApiGateway::Method",
-            "DependsOn":                        [ "Gateway" ],
-            "Properties": {
-                "RestApiId":                    { "Ref": "Gateway" },
-                "ResourceId":                   { "Ref": "GatewayStaticPathTemplatesFile" },
-                "HttpMethod":                   "GET",
-                "AuthorizationType":            "NONE",
-                "RequestParameters":            {
-                                                "method.request.path.file": true
-                },
-                "Integration":                  {
-                    "IntegrationHttpMethod":    "GET",
-                    "Type":                     "AWS",
-                    "Uri":                      { "Fn::Join": ["", [
-                                                    "arn:aws:apigateway:",
-                                                    { "Ref" : "AWS::Region" },
-                                                    { "Fn::Sub": ":s3:path/${Bucket}/static/templates/{file}" }
-                                                ]]},
-                    "RequestParameters":        { 
+                                              },
+                                              "uri": "arn:aws:apigateway:us-east-1:s3:path/com-kdgregory-example/images/{file}",
+                                              "passthroughBehavior": "when_no_templates",
+                                              "httpMethod": "GET",
+                                              "type": "aws"
+                                            }
+                                          }
+                                        },
+                                        "/js/{file}": {
+                                          "get": {
+                                            "produces": [
+                                              "text/javascript"
+                                            ],
+                                            "parameters": [
+                                              {
+                                                "name": "file",
+                                                "in": "path",
+                                                "required": true,
+                                                "type": "string"
+                                              }
+                                            ],
+                                            "responses": {
+                                              "200": {
+                                                "description": "200 response",
+                                                "schema": {
+                                                  "$ref": "#/definitions/Empty"
+                                                }
+                                              }
+                                            },
+                                            "x-amazon-apigateway-integration": {
+                                              "credentials": "arn:aws:iam::717623742438:role/service-role/LambdaPhoto-GatewayBucketRole",
+                                              "responses": {
+                                                "default": {
+                                                  "statusCode": "200"
+                                                }
+                                              },
+                                              "requestParameters": {
                                                 "integration.request.path.file": "method.request.path.file"
-                                                },
-                    "Credentials":              {"Fn::GetAtt" : ["GatewayBucketRole", "Arn"] },
-                    "IntegrationResponses":     [
-                                                    { "StatusCode": "200" }
-                                                ],
-                    "PassthroughBehavior":      "WHEN_NO_MATCH"
-                },
-                "MethodResponses": [
-                    {
-                        "StatusCode":           "200",
-                        "ResponseModels": {
-                            "text/html":  "Empty"
-                        }
-                    }
-                ]
+                                              },
+                                              "uri": "arn:aws:apigateway:us-east-1:s3:path/com-kdgregory-example/static/js/{file}",
+                                              "passthroughBehavior": "when_no_match",
+                                              "httpMethod": "GET",
+                                              "type": "aws"
+                                            }
+                                          }
+                                        },
+                                        "/templates/{file}": {
+                                          "get": {
+                                            "produces": [
+                                              "text/html"
+                                            ],
+                                            "parameters": [
+                                              {
+                                                "name": "file",
+                                                "in": "path",
+                                                "required": true,
+                                                "type": "string"
+                                              }
+                                            ],
+                                            "responses": {
+                                              "200": {
+                                                "description": "200 response",
+                                                "schema": {
+                                                  "$ref": "#/definitions/Empty"
+                                                }
+                                              }
+                                            },
+                                            "x-amazon-apigateway-integration": {
+                                              "credentials": "arn:aws:iam::717623742438:role/service-role/LambdaPhoto-GatewayBucketRole",
+                                              "responses": {
+                                                "default": {
+                                                  "statusCode": "200"
+                                                }
+                                              },
+                                              "requestParameters": {
+                                                "integration.request.path.file": "method.request.path.file"
+                                              },
+                                              "uri": "arn:aws:apigateway:us-east-1:s3:path/com-kdgregory-example/static/templates/{file}",
+                                              "passthroughBehavior": "when_no_match",
+                                              "httpMethod": "GET",
+                                              "type": "aws"
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "definitions": {
+                                        "Empty": {
+                                          "type": "object",
+                                          "title": "Empty Schema"
+                                        }
+                                      },
+                                      "x-amazon-apigateway-binary-media-types": [
+                                        "image/*"
+                                      ]
+                                    }
             }
         },
+
 
         "GatewayDeployment": {
             "Type":                 "AWS::ApiGateway::Deployment",
-            "DependsOn":            [ "GatewayAPIMethod" ],
             "Properties": {
                 "Description":      "Test deployment of the LambdaPhoto API",
                 "RestApiId":        { "Ref": "Gateway" },

@@ -26,6 +26,7 @@ import com.kdgregory.example.javalambda.webapp.Request;
 import com.kdgregory.example.javalambda.webapp.Response;
 import com.kdgregory.example.javalambda.webapp.ResponseCodes;
 import com.kdgregory.example.javalambda.webapp.Tokens;
+import com.kdgregory.example.javalambda.webapp.util.Environment;
 
 
 /**
@@ -51,36 +52,20 @@ public class UserService
 
     private Logger logger = LoggerFactory.getLogger(getClass());
 
-    private AWSCognitoIdentityProviderClient cognitoClient = new AWSCognitoIdentityProviderClient();
+    private AWSCognitoIdentityProviderClient cognitoClient;
     private JwtConsumer jwtConsumer;
 
+    private String cognitoPoolId;
+    private String cognitoClientId;
 
-    /**
-     *  Retrieves the Cognito User Pool ID from the environment.
-     *
-     *  @throws IllegalStateException if value is not set.
-     */
-    private String getCognitoPoolID()
+
+    public UserService()
     {
-        String poolId = System.getenv("COGNITO_POOL_ID");
-        if (StringUtil.isBlank(poolId))
-            throw new IllegalArgumentException("Cognito user pool ID must be set in environment");
-        return poolId;
+        cognitoClient = new AWSCognitoIdentityProviderClient();
+        cognitoPoolId = Environment.getOrThrow(Environment.COGNITO_POOL_ID);
+        cognitoClientId = Environment.getOrThrow(Environment.COGNITO_CLIENT_ID);
     }
 
-
-    /**
-     *  Retrieves the Cognito Client ID from the environment.
-     *
-     *  @throws IllegalStateException if value is not set.
-     */
-    private String getCognitoClientID()
-    {
-        String poolId = System.getenv("COGNITO_CLIENT_ID");
-        if (StringUtil.isBlank(poolId))
-            throw new IllegalArgumentException("Cognito client ID must be set in environment");
-        return poolId;
-    }
 
 
     /**
@@ -109,11 +94,11 @@ public class UserService
                 // if we're not on Lambda then the environment variable won't be set and nothing will work
                 String endpoint = String.format("https://cognito-idp.%s.amazonaws.com/%s/.well-known/jwks.json",
                                                 System.getenv("AWS_REGION"),
-                                                getCognitoPoolID());
+                                                cognitoPoolId);
 
                 String issuer = String.format("https://cognito-idp.%s.amazonaws.com/%s",
                                               System.getenv("AWS_REGION"),
-                                              getCognitoPoolID());
+                                              cognitoPoolId);
 
                 jwtConsumer = new JwtConsumerBuilder()
                               .setVerificationKeyResolver(new HttpsJwksVerificationKeyResolver(new HttpsJwks(endpoint)))
@@ -155,8 +140,6 @@ public class UserService
     }
 
 
-
-
 //----------------------------------------------------------------------------
 //  Public methods
 //----------------------------------------------------------------------------
@@ -194,8 +177,8 @@ public class UserService
             AdminInitiateAuthRequest authRequest = new AdminInitiateAuthRequest()
                     .withAuthFlow(AuthFlowType.ADMIN_NO_SRP_AUTH)
                     .withAuthParameters(authParams)
-                    .withClientId(getCognitoClientID())
-                    .withUserPoolId(getCognitoPoolID());
+                    .withUserPoolId(cognitoPoolId)
+                    .withClientId(cognitoClientId);
 
             AdminInitiateAuthResult authResponse = cognitoClient.adminInitiateAuth(authRequest);
             if (StringUtil.isBlank(authResponse.getChallengeName()))
@@ -258,7 +241,7 @@ public class UserService
         try
         {
             AdminCreateUserRequest cognitoRequest = new AdminCreateUserRequest()
-                    .withUserPoolId(getCognitoPoolID())
+                    .withUserPoolId(cognitoPoolId)
                     .withUsername(emailAddress)
                     .withUserAttributes(
                             new AttributeType()
@@ -326,8 +309,8 @@ public class UserService
             AdminInitiateAuthRequest initialRequest = new AdminInitiateAuthRequest()
                     .withAuthFlow(AuthFlowType.ADMIN_NO_SRP_AUTH)
                     .withAuthParameters(initialParams)
-                    .withClientId(getCognitoClientID())
-                    .withUserPoolId(getCognitoPoolID());
+                    .withUserPoolId(cognitoPoolId)
+                    .withClientId(cognitoClientId);
 
             AdminInitiateAuthResult initialResponse = cognitoClient.adminInitiateAuth(initialRequest);
             if (! ChallengeNameType.NEW_PASSWORD_REQUIRED.name().equals(initialResponse.getChallengeName()))
@@ -345,8 +328,8 @@ public class UserService
             AdminRespondToAuthChallengeRequest finalRequest = new AdminRespondToAuthChallengeRequest()
                     .withChallengeName(ChallengeNameType.NEW_PASSWORD_REQUIRED)
                     .withChallengeResponses(challengeResponses)
-                    .withClientId(getCognitoClientID())
-                    .withUserPoolId(getCognitoPoolID())
+                    .withUserPoolId(cognitoPoolId)
+                    .withClientId(cognitoClientId)
                     .withSession(initialResponse.getSession());
 
             AdminRespondToAuthChallengeResult challengeResponse = cognitoClient.adminRespondToAuthChallenge(finalRequest);
@@ -441,8 +424,8 @@ public class UserService
             AdminInitiateAuthRequest refreshRequest = new AdminInitiateAuthRequest()
                                               .withAuthFlow(AuthFlowType.REFRESH_TOKEN)
                                               .withAuthParameters(authParams)
-                                              .withClientId(getCognitoClientID())
-                                              .withUserPoolId(getCognitoPoolID());
+                                              .withUserPoolId(cognitoPoolId)
+                                              .withClientId(cognitoClientId);
 
             AdminInitiateAuthResult refreshResponse = cognitoClient.adminInitiateAuth(refreshRequest);
             if (StringUtil.isBlank(refreshResponse.getChallengeName()))
