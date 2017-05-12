@@ -47,9 +47,9 @@ component("upload", {
             self.doUpload = function () {
                 console.log("doUpload called");
                 $http.post('api/upload', {
-                    "fileName":     self.fileName,
-                    "fileSize":     self.fileSize,
-                    "fileType":     self.fileType,
+                    "filename":     self.fileName,
+                    "filesize":     self.fileSize,
+                    "mimetype":     self.fileType,
                     "description":  self.description,
                     "content":      self.fileDataUrl.replace(/^data.*,/, "")
                 })

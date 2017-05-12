@@ -12,6 +12,15 @@ component("main", {
                 $location.path("/upload");
             };
 
+            self.dateHelper = function(file) {
+                if (file && file.uploadedAt) {
+                    return "Uploaded " + (new Date(file.uploadedAt)).toLocaleString();
+                }
+                else {
+                    return "";
+                }
+            }
+
             self.refresh = function() {
                 console.log("refreshing file list");
                 $http.post('api/list', {})

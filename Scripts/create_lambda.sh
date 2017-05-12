@@ -4,12 +4,13 @@
 # Creates all Lambda functions and the API Gateway, using a CloudFormation script (this script
 # exists to avoid the pain of specifying CloudFormation parameters).
 #
-#   create_lambda.sh BASE_NAME BUCKET_NAME POOL_ID CLIENT_ID
+#   create_lambda.sh BASE_NAME BUCKET_NAME DB_NAME POOL_ID CLIENT_ID
 #
 #       BASE_NAME   is the name for this deployment. All AWS objects created by this script
 #                   are named by adding suffixes to this base
 #       BUCKET_NAME is the name of the bucket used for long-term app storage (including
 #                   deployed code)
+#       TABLE_NAME  is the name of the DynamoDB table used to store metadata
 #       POOL_ID     is the ID of the Cognito user pool for this app
 #       CLIENT_ID   is the "app" ID used to access the Cognito user pool
 #
@@ -26,8 +27,9 @@ set -e
 
 BASE_NAME=$1
 BUCKET_NAME=$2
-COGNITO_POOL_ID=$3
-COGNITO_CLIENT_ID=$4
+TABLE_NAME=$3
+COGNITO_POOL_ID=$4
+COGNITO_CLIENT_ID=$5
 
 
 cat > ${TMPDIR}/create_lambda_params.json <<EOF
@@ -39,6 +41,10 @@ cat > ${TMPDIR}/create_lambda_params.json <<EOF
   {
     "ParameterKey":     "Bucket",
     "ParameterValue":   "${BUCKET_NAME}"
+  },
+  {
+    "ParameterKey":     "DynamoTable",
+    "ParameterValue":   "${TABLE_NAME}"
   },
   {
     "ParameterKey":     "WebappJar",

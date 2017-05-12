@@ -8,10 +8,10 @@
     <div class="listContainer">
         <table class="photoList">
         <tr ng-repeat="file in $ctrl.fileList">
-            <td> <img src="images/{{file.fileName}}" height="200" width="300" /> </td>
-            <td> <p> {{file.fileName}}
+            <td> <img src="images/{{file.id}}/FULLSIZE" height="200" width="300" /> </td>
+            <td> <p> {{file.filename}}
                  <p> {{file.description}}
-                 <p> {{file.fileSize}} bytes
+                 <p> {{$ctrl.dateHelper(file)}}
                  </td>
             </tr>
         </table>

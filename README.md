@@ -50,6 +50,21 @@ Any response may include `Set-Cookie` headers, as a result of token refresh.
 **TBD**: describe handling of authenticated requests.
 
 
+## Database
+
+All file metadata is stored in a DynamoDB table that has the following attributes:
+
+| Attribute Name    | Description
+|-------------------|------------
+| `id`              | Unique identifier for the file, assigned during upload.
+| `user`            | User that owns the file. Also assigned during upload, based on logged-in user.
+| `filename`        | The original filename.
+| `description`     | User-provided description.
+| `mimetype`        | The standard MIME type for the file.
+| `uploadedAt`      | The millis-since-epoch timestamp when the file was uploaded.
+| `sizes`           | An array(string) that identifies the various resolutions that have been saved for the file. Includes `fullsize` and a collection of `WxH` smaller sizes.
+
+
 ## Client Implementation
 
 The client is a single-page application using AngularJS 1.x.
@@ -90,24 +105,33 @@ Run all scripts from the project root directory
 
     When you run the script it will output the pool ID and client ID; you'll need these for the final step.
 
-3. Create the database and plumbing
+3. Create the metadata table
 
-    ** this step isn't currently supported **
+    This creates a minimal DynamoDB table that will be used to store photo metadata.
 
     ```
-    insert script here
+    Scripts/create_dynamo.sh TABLE_NAME
     ```
-
-    This script runs a CloudFormation template to create the "unchanging" infrastructure (versus the API Gateway
-    and Lambda procs, which you might wish to change). It will output some IDs that you need for the next step.
 
 4. Create the API Gateway and Lambda procs.
 
     ```
-    Scripts/create_lambda.sh BASE_NAME BUCKET_NAME POOL_ID CLIENT_ID
+    Scripts/create_lambda.sh BASE_NAME BUCKET_NAME TABLE_NAME POOL_ID CLIENT_ID
     ```
+
+    This step requires the IDs from step 2 and the names from steps 1 and 3, and uses them to parameterize
+    a CloudFormation script.
 
 
 ### Invoking via CURL
 
     curl -v -c /tmp/cookies.dat -H 'Content-Type: application/json' -d '{"email": "example@mailinator.com", "password": "MyCoolPassword123"}' https://7nb67d5al6.execute-api.us-east-1.amazonaws.com/test/api/signin
+
+
+## TODOs
+
+Support GET
+
+Check authorization for upload/list; retrieve user ID from token
+
+Implement resizer

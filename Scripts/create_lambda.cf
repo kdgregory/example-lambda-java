@@ -11,6 +11,10 @@
             "Description": "Name of the bucket used by the application",
             "Type": "String"
         },
+        "DynamoTable": {
+            "Description": "Name of the DynamoDB table used to store metadata",
+            "Type": "String"
+        },
         "WebappJar": {
             "Description": "Fully-qualified path to the WebApp deployment JAR",
             "Type": "String"
@@ -86,6 +90,22 @@
                                             ]
                         }
                     }, {
+                        "PolicyName":       { "Fn::Sub": "${BaseName}-LambdaDynamoPolicy" },
+                        "PolicyDocument":   {
+                            "Version":      "2012-10-17",
+                            "Statement":    [
+                                                {
+                                                    "Effect": "Allow",
+                                                    "Action": [
+                                                        "dynamodb:GetItem",
+                                                        "dynamodb:PutItem",
+                                                        "dynamodb:Scan"
+                                                    ],
+                                                    "Resource": [ { "Fn::Sub": "arn:aws:dynamodb:*:${AWS::AccountId}:table/${DynamoTable}" } ]
+                                                }
+                                            ]
+                        }
+                    }, {
                         "PolicyName":       { "Fn::Sub": "${BaseName}-LambdaBucketPolicy" },
                         "PolicyDocument":   {
                             "Version" :     "2012-10-17",
@@ -125,6 +145,7 @@
                     "Variables": {
                         "COGNITO_POOL_ID":   { "Ref": "CognitoPoolId" },
                         "COGNITO_CLIENT_ID": { "Ref": "CognitoClientId" },
+                        "DYNAMO_TABLE":      { "Ref": "DynamoTable" },
                         "S3_IMAGE_BUCKET":   { "Ref": "Bucket" },
                         "S3_IMAGE_PREFIX":   "images"
                     }
@@ -273,7 +294,7 @@
                                             }
                                           }
                                         },
-                                        "/images/{file}": {
+                                        "/images/{file}/{size}": {
                                           "get": {
                                             "produces": [
                                               "image/jpeg",
@@ -283,6 +304,12 @@
                                             "parameters": [
                                               {
                                                 "name": "file",
+                                                "in": "path",
+                                                "required": true,
+                                                "type": "string"
+                                              },
+                                              {
+                                                "name": "size",
                                                 "in": "path",
                                                 "required": true,
                                                 "type": "string"
@@ -317,9 +344,10 @@
                                                 }
                                               },
                                               "requestParameters": {
-                                                "integration.request.path.file": "method.request.path.file"
+                                                "integration.request.path.file": "method.request.path.file",
+                                                "integration.request.path.size": "method.request.path.size"
                                               },
-                                              "uri": "arn:aws:apigateway:us-east-1:s3:path/com-kdgregory-example/images/{file}",
+                                              "uri": "arn:aws:apigateway:us-east-1:s3:path/com-kdgregory-example/images/{file}/{size}",
                                               "passthroughBehavior": "when_no_templates",
                                               "httpMethod": "GET",
                                               "type": "aws"

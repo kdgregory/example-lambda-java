@@ -1,25 +1,20 @@
 // Copyright (c) Keith D Gregory, all rights reserved
 package com.kdgregory.example.javalambda.webapp.services;
 
-import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
+import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.sf.kdgcommons.codec.Base64Codec;
 import net.sf.kdgcommons.collections.MapBuilder;
-import net.sf.kdgcommons.lang.ObjectUtil;
 import net.sf.kdgcommons.lang.StringUtil;
 
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.*;
-
+import com.kdgregory.example.javalambda.photomanager.PhotoManager;
+import com.kdgregory.example.javalambda.photomanager.PhotoMetadata;
 import com.kdgregory.example.javalambda.webapp.Request;
 import com.kdgregory.example.javalambda.webapp.Response;
 import com.kdgregory.example.javalambda.webapp.ResponseCodes;
@@ -32,15 +27,15 @@ import com.kdgregory.example.javalambda.webapp.util.Environment;
 public class PhotoService
 {
     /**
-     *  This is the data model for both uploads and downloads; see comments
-     *  for which values are upload-only.
+     *  The list of parameters for uploads. These match the field names of the
+     *  data stored in Dynamo, with some additions and subtractions.
      */
     public static class ParamNames
     {
-        public final static String  FILENAME    = "fileName";
-        public final static String  FILESIZE    = "fileSize";
-        public final static String  FILETYPE    = "fileType";
-        public final static String  DESCRIPTION = "description";
+        public final static String  FILENAME    = PhotoMetadata.Fields.FILENAME;
+        public final static String  FILETYPE    = PhotoMetadata.Fields.MIMETYPE;
+        public final static String  DESCRIPTION = PhotoMetadata.Fields.DESCRIPTION;
+        public final static String  FILESIZE    = "filesize";
         public final static String  CONTENT     = "content";
     }
 
@@ -51,71 +46,15 @@ public class PhotoService
 
     private Logger logger = LoggerFactory.getLogger(getClass());
 
-    private AmazonS3Client s3Client = new AmazonS3Client();
-
-    private String s3BucketName;
-    private String s3ImagePrefix;
+    private PhotoManager photoManager;
 
 
     public PhotoService()
     {
-        s3BucketName = Environment.getOrThrow(Environment.S3_IMAGE_BUCKET);
-        s3ImagePrefix = Environment.getOrThrow(Environment.S3_IMAGE_PREFIX);
-    }
-
-
-    /**
-     *  Holder for an upload request, which verifies that all fields are present
-     *  and transforms any that need it.
-     */
-    private static class UploadRequest
-    {
-        String filename;
-        String contentType;
-        long fileSize;
-        String description;
-        byte[] content;
-
-        public Map<String,Object> invalidFields = new TreeMap<String,Object>();
-
-        public UploadRequest(Request request)
-        {
-            filename = (String)request.getBody().get(ParamNames.FILENAME);
-            if (StringUtil.isBlank(filename))
-                invalidFields.put(ParamNames.FILENAME, filename);
-
-            contentType = (String)request.getBody().get(ParamNames.FILETYPE);
-            if (StringUtil.isBlank(contentType))
-                invalidFields.put(ParamNames.FILETYPE, contentType);
-
-            Number fileSizeObj = (Number)request.getBody().get(ParamNames.FILESIZE);
-            if (fileSizeObj != null)
-            {
-                fileSize = fileSizeObj.longValue();
-            }
-            else
-            {
-                invalidFields.put(ParamNames.FILESIZE, null);
-            }
-
-            description = ObjectUtil.defaultValue((String)request.getBody().get(ParamNames.DESCRIPTION), "");
-
-            String base64Content = (String)request.getBody().get(ParamNames.CONTENT);
-            if (StringUtil.isEmpty(base64Content))
-                invalidFields.put(ParamNames.CONTENT, null);
-            else
-            {
-                try
-                {
-                    content = new Base64Codec().toBytes(base64Content);
-                }
-                catch (IllegalArgumentException ex)
-                {
-                    invalidFields.put(ParamNames.CONTENT, StringUtil.substr(base64Content, 0, 8) + "...");
-                }
-            }
-
-        }
+        photoManager = new PhotoManager(
+                            Environment.getOrThrow(Environment.DYNAMO_TABLE),
+                            Environment.getOrThrow(Environment.S3_IMAGE_BUCKET),
+                            Environment.getOrThrow(Environment.S3_IMAGE_PREFIX));
     }
 
 
@@ -126,21 +65,15 @@ public class PhotoService
     /**
      *  Retrieves a list of the current user's photos.
      */
-    public Response listPhotos(Request request)
+    public Response listPhotos(String userId, Request request)
     {
-        List<Map<String,Object>> result = new ArrayList<Map<String,Object>>();
-        
-        // this only returns a single batch of objects -- it's here as a placeholder,
-        // and will be replaced by a call to DynamoDB
-        ObjectListing objects = s3Client.listObjects(s3BucketName, s3ImagePrefix);
-        for (S3ObjectSummary obj : objects.getObjectSummaries())
-        {
-            result.add(new MapBuilder<String,Object>(new HashMap<String,Object>())
-                       .put(ParamNames.FILENAME, obj.getKey().replaceFirst(s3ImagePrefix + "/", ""))
-                       .put(ParamNames.FILESIZE, Long.valueOf(obj.getSize()))
-                       .put(ParamNames.DESCRIPTION, "dummy description")
-                       .toMap());
-        }
+        logger.debug("listPhotos for user {}", userId);
+
+         List<Map<String,Object>> result = new ArrayList<Map<String,Object>>();
+         for (PhotoMetadata item : photoManager.list(userId))
+         {
+             result.add(item.toClientMap());
+         }
 
         return new Response(ResponseCodes.SUCCESS, result);
     }
@@ -149,28 +82,51 @@ public class PhotoService
     /**
      *  Uploads a new photo.
      */
-    public Response upload(Request request)
+    public Response upload(String userId, Request request)
     {
-        UploadRequest upload = new UploadRequest(request);
-        if (upload.invalidFields.size() > 0)
+        // we'll jam our data into the request body for simplicity
+        Map<String,Object> requestBody = new MapBuilder<String,Object>(request.getBody())
+                                         .put(PhotoMetadata.Fields.ID, UUID.randomUUID().toString())
+                                         .put(PhotoMetadata.Fields.USER, userId)
+                                         .put(PhotoMetadata.Fields.UPLOADED_AT, Long.valueOf(System.currentTimeMillis()))
+                                         .toMap();
+
+        logger.debug("upload of {} for user {}", requestBody.get(ParamNames.FILENAME), userId);
+
+        PhotoMetadata metadata = PhotoMetadata.fromClientMap(requestBody);
+        if (! metadata.isValid())
         {
-            logger.warn("invalid upload: " + upload.invalidFields);
+            logger.debug("missing metadata; provided keys: {}", requestBody.keySet());
             return new Response(ResponseCodes.INVALID_OPERATION);
         }
 
-        logger.info("uploading: {}, content-type: {}, size: {}",
-                    upload.filename, upload.contentType, upload.fileSize);
+        String base64Content = (String)request.getBody().get(ParamNames.CONTENT);
+        if (base64Content == null)
+        {
+            logger.debug("missing content");
+            return new Response(ResponseCodes.INVALID_OPERATION);
+        }
 
+        byte[] content = null;
+        try
+        {
+            content = new Base64Codec().toBytes(base64Content);
+        }
+        catch (IllegalArgumentException ex)
+        {
+            logger.debug("invalid content: " + StringUtil.substr(base64Content, 0, 16) + "...");
+            return new Response(ResponseCodes.INVALID_OPERATION);
+        }
 
-        ObjectMetadata s3Meta = new ObjectMetadata();
-        s3Meta.setContentLength(upload.fileSize);
-        s3Meta.setContentType(upload.contentType);
-        PutObjectResult s3Response = s3Client.putObject(
-                                        s3BucketName,
-                                        s3ImagePrefix + "/" + upload.filename,
-                                        new ByteArrayInputStream(upload.content),
-                                        s3Meta);
-        logger.debug("upload successful, etag = " + s3Response.getETag());
+        Object contentSize = requestBody.get(ParamNames.FILESIZE);
+        if ((contentSize == null) || !(contentSize instanceof Number) || (((Number)contentSize).intValue() != content.length))
+        {
+            logger.debug("invalid content size: {} (actual size was {})" + contentSize, content.length);
+            return new Response(ResponseCodes.INVALID_OPERATION);
+        }
+
+        photoManager.upload(metadata, content);
+
         return new Response(ResponseCodes.SUCCESS);
     }
 }

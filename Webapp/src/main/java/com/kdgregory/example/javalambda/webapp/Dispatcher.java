@@ -86,9 +86,9 @@ public class Dispatcher
             case RequestActions.CHECK_AUTH :
                 return userService.checkAuthorization(request);
             case RequestActions.LIST :
-                return photoService.listPhotos(request);
+                return photoService.listPhotos("dummy", request);
             case RequestActions.UPLOAD :
-                return photoService.upload(request);
+                return photoService.upload("dummy", request);
             default:
                 return new Response(404);
         }
