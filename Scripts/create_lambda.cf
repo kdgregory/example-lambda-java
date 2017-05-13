@@ -99,7 +99,7 @@
                                                     "Action": [
                                                         "dynamodb:GetItem",
                                                         "dynamodb:PutItem",
-                                                        "dynamodb:Scan"
+                                                        "dynamodb:Query"
                                                     ],
                                                     "Resource": [ { "Fn::Sub": "arn:aws:dynamodb:*:${AWS::AccountId}:table/${DynamoTable}" } ]
                                                 }
@@ -228,6 +228,33 @@
                                           }
                                         },
                                         "/api/{action}": {
+                                          "get": {
+                                            "produces": [
+                                              "application/json"
+                                            ],
+                                            "parameters": [
+                                              {
+                                                "name": "action",
+                                                "in": "path",
+                                                "required": true,
+                                                "type": "string"
+                                              }
+                                            ],
+                                            "responses": {
+                                              "200": {
+                                                "description": "200 response",
+                                                "schema": {
+                                                  "$ref": "#/definitions/Empty"
+                                                }
+                                              }
+                                            },
+                                            "x-amazon-apigateway-integration": {
+                                              "uri": "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:717623742438:function:LambdaPhoto-Webapp/invocations",
+                                              "passthroughBehavior": "when_no_match",
+                                              "httpMethod": "POST",
+                                              "type": "aws_proxy"
+                                            }
+                                          },
                                           "post": {
                                             "produces": [
                                               "application/json"

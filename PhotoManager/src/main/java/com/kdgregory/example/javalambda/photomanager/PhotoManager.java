@@ -3,6 +3,7 @@ package com.kdgregory.example.javalambda.photomanager;
 
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -10,11 +11,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.ScanResult;
+import com.amazonaws.services.dynamodbv2.model.*;
 import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectResult;
+import com.amazonaws.services.s3.model.*;
 
 import com.kdgregory.example.javalambda.photomanager.PhotoMetadata.Sizes;
 
@@ -56,14 +55,29 @@ public class PhotoManager
     {
         List<PhotoMetadata> result = new ArrayList<PhotoMetadata>();
 
-        // TODO - limit to invoking user
-        // TODO - handle multiple pages
+        Map<String,AttributeValue> expressionValues = new HashMap<>();
+        expressionValues.put(":username", new AttributeValue().withS(user));
+        QueryRequest request = new QueryRequest()
+                               .withTableName(ddbTableName)
+                               .withKeyConditionExpression(PhotoMetadata.Fields.USERNAME + " = :username")
+                               .withExpressionAttributeValues(expressionValues);
 
-        ScanResult response = ddbClient.scan(ddbTableName, PhotoMetadata.ALL_FIELDS);
-        for (Map<String,AttributeValue> item : response.getItems())
+        boolean more = false;
+        do
         {
-            result.add(PhotoMetadata.fromDynamoMap(item));
-        }
+            QueryResult response = ddbClient.query(request);
+            logger.debug("retrieved {} items", response.getCount());
+            for (Map<String,AttributeValue> item : response.getItems())
+            {
+                result.add(PhotoMetadata.fromDynamoMap(item));
+            }
+
+            // the documentation says this will be empty if there are no more records to retrieve,
+            // but in reality it's null ... so I'll handle both
+            Map<String,AttributeValue> lastEvaluatedKey = response.getLastEvaluatedKey();
+            more = (lastEvaluatedKey != null) && (lastEvaluatedKey.size() > 0);
+            request.setExclusiveStartKey(lastEvaluatedKey);
+        } while (more);
 
         return result;
     }

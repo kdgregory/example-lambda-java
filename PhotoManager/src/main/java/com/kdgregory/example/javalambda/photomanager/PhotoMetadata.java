@@ -33,7 +33,7 @@ public class PhotoMetadata
     public static class Fields
     {
         public final static String  ID          = "id";
-        public final static String  USER        = "user";
+        public final static String  USERNAME    = "username";
         public final static String  FILENAME    = "filename";
         public final static String  DESCRIPTION = "description";
         public final static String  MIMETYPE    = "mimetype";
@@ -42,7 +42,7 @@ public class PhotoMetadata
     }
 
     final public static List<String> ALL_FIELDS = Arrays.asList(
-        Fields.ID, Fields.USER, Fields.FILENAME, Fields.DESCRIPTION, Fields.MIMETYPE, Fields.UPLOADED_AT, Fields.SIZES);
+        Fields.ID, Fields.USERNAME, Fields.FILENAME, Fields.DESCRIPTION, Fields.MIMETYPE, Fields.UPLOADED_AT, Fields.SIZES);
 
 
     /**
@@ -91,7 +91,7 @@ public class PhotoMetadata
     {
         return new PhotoMetadata(
             (String)map.get(Fields.ID),
-            (String)map.get(Fields.USER),
+            (String)map.get(Fields.USERNAME),
             (String)map.get(Fields.FILENAME),
             (String)map.get(Fields.MIMETYPE),
             (String)map.get(Fields.DESCRIPTION),
@@ -107,10 +107,12 @@ public class PhotoMetadata
     {
         return new PhotoMetadata(
             map.get(Fields.ID).getS(),
-            map.get(Fields.USER).getS(),
+            map.get(Fields.USERNAME).getS(),
             map.get(Fields.FILENAME).getS(),
             map.get(Fields.MIMETYPE).getS(),
-            map.get(Fields.DESCRIPTION).getS(),
+            map.containsKey(Fields.DESCRIPTION)
+                        ? map.get(Fields.DESCRIPTION).getS()
+                        : null,
             map.containsKey(Fields.UPLOADED_AT)
                         ? Long.valueOf(map.get(Fields.UPLOADED_AT).getN())
                         : null,
@@ -176,7 +178,7 @@ public class PhotoMetadata
         Map<String,Object> result = new HashMap<String,Object>();
 
         result.put(Fields.ID,           id);
-        result.put(Fields.USER,         user);
+        result.put(Fields.USERNAME,         user);
         result.put(Fields.FILENAME,     filename);
         result.put(Fields.DESCRIPTION,  description);
         result.put(Fields.UPLOADED_AT,  uploadedAt);
@@ -201,7 +203,7 @@ public class PhotoMetadata
         Map<String,AttributeValue> result = new HashMap<String,AttributeValue>();
 
         if (! StringUtil.isBlank(id))           result.put(Fields.ID,           new AttributeValue().withS(id));
-        if (! StringUtil.isBlank(user))         result.put(Fields.USER,         new AttributeValue().withS(user));
+        if (! StringUtil.isBlank(user))         result.put(Fields.USERNAME,         new AttributeValue().withS(user));
         if (! StringUtil.isBlank(filename))     result.put(Fields.FILENAME,     new AttributeValue().withS(filename));
         if (! StringUtil.isBlank(mimetype))     result.put(Fields.MIMETYPE,     new AttributeValue().withS(mimetype));
         if (! StringUtil.isBlank(description))  result.put(Fields.DESCRIPTION,  new AttributeValue().withS(description));

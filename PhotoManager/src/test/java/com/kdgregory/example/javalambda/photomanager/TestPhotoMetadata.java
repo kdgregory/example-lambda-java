@@ -22,7 +22,7 @@ public class TestPhotoMetadata
     {
         Map<String,Object> map = new HashMap<String,Object>();
         map.put(PhotoMetadata.Fields.ID,            "abcd");
-        map.put(PhotoMetadata.Fields.USER,          "qwerty");
+        map.put(PhotoMetadata.Fields.USERNAME,          "qwerty");
         map.put(PhotoMetadata.Fields.FILENAME,      "test");
         map.put(PhotoMetadata.Fields.MIMETYPE,      "image/jpeg");
         map.put(PhotoMetadata.Fields.DESCRIPTION,   "this is a test");
@@ -31,7 +31,7 @@ public class TestPhotoMetadata
         PhotoMetadata meta = PhotoMetadata.fromClientMap(map);
 
         assertEquals(PhotoMetadata.Fields.ID,           "abcd",                                     meta.getId());
-        assertEquals(PhotoMetadata.Fields.USER,         "qwerty",                                   meta.getUser());
+        assertEquals(PhotoMetadata.Fields.USERNAME,         "qwerty",                                   meta.getUser());
         assertEquals(PhotoMetadata.Fields.FILENAME,     "test",                                     meta.getFilename());
         assertEquals(PhotoMetadata.Fields.MIMETYPE,     "image/jpeg",                               meta.getMimetype());
         assertEquals(PhotoMetadata.Fields.DESCRIPTION,  "this is a test",                           meta.getDescription());
@@ -51,7 +51,7 @@ public class TestPhotoMetadata
     {
         Map<String,AttributeValue> map = new HashMap<String,AttributeValue>();
         map.put(PhotoMetadata.Fields.ID,            new AttributeValue().withS("abcd"));
-        map.put(PhotoMetadata.Fields.USER,          new AttributeValue().withS("qwerty"));
+        map.put(PhotoMetadata.Fields.USERNAME,          new AttributeValue().withS("qwerty"));
         map.put(PhotoMetadata.Fields.FILENAME,      new AttributeValue().withS("test"));
         map.put(PhotoMetadata.Fields.MIMETYPE,      new AttributeValue().withS("image/jpeg"));
         map.put(PhotoMetadata.Fields.DESCRIPTION,   new AttributeValue().withS("this is a test"));
@@ -61,7 +61,7 @@ public class TestPhotoMetadata
         PhotoMetadata meta = PhotoMetadata.fromDynamoMap(map);
 
         assertEquals(PhotoMetadata.Fields.ID,           "abcd",                                     meta.getId());
-        assertEquals(PhotoMetadata.Fields.USER,         "qwerty",                                   meta.getUser());
+        assertEquals(PhotoMetadata.Fields.USERNAME,         "qwerty",                                   meta.getUser());
         assertEquals(PhotoMetadata.Fields.FILENAME,     "test",                                     meta.getFilename());
         assertEquals(PhotoMetadata.Fields.MIMETYPE,     "image/jpeg",                               meta.getMimetype());
         assertEquals(PhotoMetadata.Fields.DESCRIPTION,  "this is a test",                           meta.getDescription());

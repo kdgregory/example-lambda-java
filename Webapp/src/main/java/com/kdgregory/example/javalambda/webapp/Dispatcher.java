@@ -4,11 +4,13 @@ package com.kdgregory.example.javalambda.webapp;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.kdgregory.example.javalambda.webapp.Request.HttpMethod;
 import com.kdgregory.example.javalambda.webapp.services.PhotoService;
 import com.kdgregory.example.javalambda.webapp.services.UnhandledServiceException;
 import com.kdgregory.example.javalambda.webapp.services.UserService;
@@ -17,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.sf.kdgcommons.collections.CollectionUtil;
+import net.sf.kdgcommons.lang.StringUtil;
 
 
 
@@ -32,6 +35,40 @@ public class Dispatcher
     private UserService userService = new UserService();
     private PhotoService photoService = new PhotoService();
 
+    
+//----------------------------------------------------------------------------
+//  Public methods
+//----------------------------------------------------------------------------
+
+    public Map<String,Object> handler(Map<String,Object> proxyRequest, Context lambdaContext)
+    {
+        try
+        {
+            // this is the only place we pull pieces out of the AWS request so forego constants
+            Request request = extractRequest(proxyRequest);
+            Response response = dispatch(request);
+            return buildResponseMap(response);
+        }
+        catch (IllegalArgumentException ex)
+        {
+            logger.warn(ex.getMessage());
+            return buildResponseMap(new Response(400));
+        }
+        catch (UnhandledServiceException ignored)
+        {
+            return buildResponseMap(new Response(500));
+        }
+        catch (Exception ex)
+        {
+            logger.error("unexpected exception during request processing", ex);
+            return buildResponseMap(new Response(500));
+        }
+    }
+
+    
+//----------------------------------------------------------------------------
+//  Internals
+//----------------------------------------------------------------------------
 
     /**
      *  Constructs the request object by extracting information from the map
@@ -46,13 +83,21 @@ public class Dispatcher
         // to the original request throughout the method; I'm using literals because
         // this is the only place that these values will appear
 
+        String method      = (String)CollectionUtil.getVia(proxyRequest, "httpMethod");
         String action      = (String)CollectionUtil.getVia(proxyRequest, "pathParameters", "action");
         String tokenHeader = (String)CollectionUtil.getVia(proxyRequest, "headers", "Cookie");
         String body        = (String)CollectionUtil.getVia(proxyRequest, "body");
+        
+        // body will be empty on GET, but rather than have separate code paths I'll give a dummy value
+        if (StringUtil.isEmpty(body))
+        {
+            body = "{}";
+        }
 
         try
         {
             return new Request(
+                    method,
                     action,
                     new Tokens(tokenHeader),
                     CollectionUtil.cast(
@@ -74,24 +119,51 @@ public class Dispatcher
      */
     private Response dispatch(Request request)
     {
-        logger.info("processing action: {}", request.getAction());
+        logger.info("dispatching action: {} {}", request.getMethod(), request.getAction());
         switch (request.getAction())
         {
             case RequestActions.SIGNIN :
-                return userService.signIn(request);
+                return invokeIf(request, HttpMethod.POST, r -> userService.signIn(r));
             case RequestActions.SIGNUP :
-                return userService.signUp(request);
+                return invokeIf(request, HttpMethod.POST, r -> userService.signUp(r));
             case RequestActions.CONFIRM_SIGNUP :
-                return userService.confirmSignUp(request);
-            case RequestActions.CHECK_AUTH :
-                return userService.checkAuthorization(request);
+                return invokeIf(request, HttpMethod.POST, r -> userService.confirmSignUp(r));
             case RequestActions.LIST :
-                return photoService.listPhotos("dummy", request);
+                return invokeIf(request, HttpMethod.GET,  authorized(r -> photoService.listPhotos(r)));
             case RequestActions.UPLOAD :
-                return photoService.upload("dummy", request);
+                return invokeIf(request, HttpMethod.POST, authorized(r -> photoService.upload(r)));
             default:
                 return new Response(404);
         }
+    }
+    
+    
+    /**
+     *  Verifies that the request matches the desired method, and if yes dispatches
+     *  to the provided function.
+     */
+    private Response invokeIf(Request req, Request.HttpMethod method, Function<Request,Response> f)
+    {
+        return (req.getMethod() == method)
+             ? f.apply(req)
+             : new Response(ResponseCodes.INVALID_REQUEST);
+    }
+    
+    
+    /**
+     *  Returns a function that checks authorization before invoking passed function.
+     *  This is intended to be passed to {@link invokeIf}, as a semi-DSL.
+     */
+    private Function<Request,Response> authorized(Function<Request,Response> f)
+    {
+        return new Function<Request,Response>()
+        {
+            @Override
+            public Response apply(Request req)
+            {
+                return userService.invokeCheckedOperation(req, f);
+            }
+        };
     }
 
 
@@ -126,31 +198,5 @@ public class Dispatcher
         }
 
         return responseMap;
-    }
-
-
-    public Map<String,Object> handler(Map<String,Object> proxyRequest, Context lambdaContext)
-    {
-        try
-        {
-            // this is the only place we pull pieces out of the AWS request so forego constants
-            Request request = extractRequest(proxyRequest);
-            Response response = dispatch(request);
-            return buildResponseMap(response);
-        }
-        catch (IllegalArgumentException ex)
-        {
-            logger.warn(ex.getMessage());
-            return buildResponseMap(new Response(400));
-        }
-        catch (UnhandledServiceException ignored)
-        {
-            return buildResponseMap(new Response(500));
-        }
-        catch (Exception ex)
-        {
-            logger.error("unexpected exception during request processing", ex);
-            return buildResponseMap(new Response(500));
-        }
     }
 }

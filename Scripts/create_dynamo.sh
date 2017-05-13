@@ -9,14 +9,22 @@ cat > /tmp/$$-tabledef.json <<EOF
 {
     "AttributeDefinitions": [
         {
+            "AttributeName": "username", 
+            "AttributeType": "S"
+        },
+        {
             "AttributeName": "id", 
             "AttributeType": "S"
         }
     ], 
     "KeySchema": [
         {
-            "AttributeName": "id", 
+            "AttributeName": "username", 
             "KeyType": "HASH"
+        },
+        {
+            "AttributeName": "id", 
+            "KeyType": "RANGE"
         }
     ], 
     "ProvisionedThroughput": {

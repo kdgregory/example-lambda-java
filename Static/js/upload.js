@@ -57,6 +57,11 @@ component("upload", {
                     function(response) {
                         if (response.data.responseCode === "SUCCESS") {
                             console.log("got success");
+                            $location.path("/main");
+                        }
+                        else if (response.data.responseCode === "NOT_AUTHENTICATED") {
+                            console.log("must authenticate");
+                            $location.path("/signIn");
                         }
                         else {
                             alert("got: " + response.data.responseCode);
@@ -66,7 +71,9 @@ component("upload", {
                         alert("upload failed: " + reason);
                     });
 
-                $location.path("/main");
+                // disable upload button while in process of upload
+                self.fileDataUrl = null;
+                $scope.$apply();
             }
         }
     ]

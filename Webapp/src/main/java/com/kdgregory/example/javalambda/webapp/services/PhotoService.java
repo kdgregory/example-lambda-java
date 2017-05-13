@@ -65,8 +65,9 @@ public class PhotoService
     /**
      *  Retrieves a list of the current user's photos.
      */
-    public Response listPhotos(String userId, Request request)
+    public Response listPhotos(Request request)
     {
+        String userId = request.getUser();
         logger.debug("listPhotos for user {}", userId);
 
          List<Map<String,Object>> result = new ArrayList<Map<String,Object>>();
@@ -82,12 +83,14 @@ public class PhotoService
     /**
      *  Uploads a new photo.
      */
-    public Response upload(String userId, Request request)
+    public Response upload(Request request)
     {
+        String userId = request.getUser();
+
         // we'll jam our data into the request body for simplicity
         Map<String,Object> requestBody = new MapBuilder<String,Object>(request.getBody())
                                          .put(PhotoMetadata.Fields.ID, UUID.randomUUID().toString())
-                                         .put(PhotoMetadata.Fields.USER, userId)
+                                         .put(PhotoMetadata.Fields.USERNAME, userId)
                                          .put(PhotoMetadata.Fields.UPLOADED_AT, Long.valueOf(System.currentTimeMillis()))
                                          .toMap();
 

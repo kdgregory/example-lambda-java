@@ -3,6 +3,7 @@ package com.kdgregory.example.javalambda.webapp.services;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProviderClient;
 import com.amazonaws.services.cognitoidp.model.*;
@@ -67,13 +68,23 @@ public class UserService
     }
 
 
-
     /**
      *  Extracts the tokens that we care about from an authentication result.
+     *  This will be used both for initial signin, which supplies both tokens,
+     *  and for refresh, which only supplies a new access token. In the latter
+     *  case, we need to retain the refresh token from an earlier request, so
+     *  give the option of passing in existing tokens.
      */
-    private Tokens createAuthTokens(AuthenticationResultType authResult)
+    private Tokens createAuthTokens(Tokens existing, AuthenticationResultType authResult)
     {
-        return new Tokens(authResult.getAccessToken(), authResult.getRefreshToken());
+        if (existing == null)
+        {
+            return new Tokens(authResult.getAccessToken(), authResult.getRefreshToken());
+        }
+        else
+        {
+            return new Tokens(authResult.getAccessToken(), existing.getRefreshToken());
+        }
     }
 
 
@@ -184,7 +195,7 @@ public class UserService
             if (StringUtil.isBlank(authResponse.getChallengeName()))
             {
                 logger.debug("signIn: success: {}", emailAddress);
-                return new Response(createAuthTokens(authResponse.getAuthenticationResult()));
+                return new Response(createAuthTokens(null, authResponse.getAuthenticationResult()));
             }
             else if (ChallengeNameType.NEW_PASSWORD_REQUIRED.name().equals(authResponse.getChallengeName()))
             {
@@ -336,7 +347,7 @@ public class UserService
             if (StringUtil.isBlank(challengeResponse.getChallengeName()))
             {
                 logger.debug("confirmSignUp: success: {}", emailAddress);
-                return new Response(createAuthTokens(challengeResponse.getAuthenticationResult()));
+                return new Response(createAuthTokens(null, challengeResponse.getAuthenticationResult()));
             }
             else
             {
@@ -369,22 +380,20 @@ public class UserService
 
 
     /**
-     *  Verifies that a user has logged in, refreshing their access token if required.
-     *
-     *  Returns a shell response that contains the result of authentication along with
-     *  potentially a new set of tokens. Before invoking any operation that requires
-     *  authentication, the caller should check the response code; if it's not SUCCESS
-     *  return the response to the user. Assuming that the user is authenticated, the
-     *  caller should merge the tokens from this response with the response from the
-     *  authenticated method.
+     *  Checks the tokens, refreshing them if necessary. Returns an appropriate error if
+     *  the user isn't authorized, otherwise appends the user info to the request and
+     *  invokes the passed operation.
      */
-    public Response checkAuthorization(Request request)
+    public Response invokeCheckedOperation(Request request, Function<Request,Response> op)
     {
         String accessToken = request.getTokens().getAccessToken();
         String refreshToken = request.getTokens().getRefreshToken();
 
         if (StringUtil.isBlank(accessToken) || StringUtil.isBlank(refreshToken))
+        {
+            logger.debug("missing tokens -- {}; forcing re-auth", request.getTokens());
             return new Response(ResponseCodes.NOT_AUTHENTICATED);
+        }
 
         // first try to validate the access token
         try
@@ -393,11 +402,22 @@ public class UserService
             if (username != null)
             {
                 logger.debug("checkAuthorization: success: {}", username);
-                return new Response(ResponseCodes.SUCCESS);
+                request.setUser(username);
+                return op.apply(request);
             }
             else
             {
-                return attemptRefresh(request, refreshToken);
+                Tokens tokens = attemptRefresh(request.getTokens());
+                if (tokens == null)
+                {
+                    return new Response(ResponseCodes.NOT_AUTHENTICATED);
+                }
+                else
+                {
+                    logger.debug("attempting auth check again with {}", tokens);
+                    request.setTokens(tokens);
+                    return invokeCheckedOperation(request, op);
+                }
             }
         }
         catch (InvalidJwtSignatureException ex)
@@ -413,13 +433,13 @@ public class UserService
      *  This handles the refresh logic. It's separate from authenticate() because otherwise
      *  the indentation would grow too large. I'm keeping them physically close, however.
      */
-    private Response attemptRefresh(Request request, String refreshToken)
+    private Tokens attemptRefresh(Tokens existingTokens)
     {
         logger.debug("attemptRefresh: starting");
         try
         {
             Map<String,String> authParams = new HashMap<String,String>();
-            authParams.put("REFRESH_TOKEN", refreshToken);
+            authParams.put("REFRESH_TOKEN", existingTokens.getRefreshToken());
 
             AdminInitiateAuthRequest refreshRequest = new AdminInitiateAuthRequest()
                                               .withAuthFlow(AuthFlowType.REFRESH_TOKEN)
@@ -435,13 +455,13 @@ public class UserService
                 if (username != null)
                 {
                     logger.debug("attemptRefresh: success: {}", username);
-                    return new Response(createAuthTokens(authResult));
+                    return createAuthTokens(existingTokens, authResult);
                 }
                 else
                 {
                     // this should never happen
                     logger.warn("attemptRefresh: unable to get username after successful refresh: {}", authResult.getAccessToken());
-                    return new Response(ResponseCodes.NOT_AUTHENTICATED);
+                    return null;
                 }
             }
             else
@@ -454,7 +474,7 @@ public class UserService
         {
             logger.warn("attemptRefresh: caught TooManyRequestsException, delaying then retrying");
             ThreadUtil.sleepQuietly(250);
-            return attemptRefresh(request, refreshToken);
+            return attemptRefresh(existingTokens);
         }
         catch (Exception ex)
         {

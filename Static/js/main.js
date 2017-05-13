@@ -23,12 +23,16 @@ component("main", {
 
             self.refresh = function() {
                 console.log("refreshing file list");
-                $http.post('api/list', {})
+                $http.get('api/list')
                 .then(
                     function(response) {
                         if (response.data.responseCode === "SUCCESS") {
                             console.log("got success");
                             self.fileList = response.data.data;
+                        }
+                        else if (response.data.responseCode === "NOT_AUTHENTICATED") {
+                            console.log("must authenticate");
+                            $location.path("/signIn");
                         }
                         else {
                                 alert("got: " + response.data.responseCode);

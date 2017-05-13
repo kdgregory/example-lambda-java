@@ -126,12 +126,3 @@ Run all scripts from the project root directory
 ### Invoking via CURL
 
     curl -v -c /tmp/cookies.dat -H 'Content-Type: application/json' -d '{"email": "example@mailinator.com", "password": "MyCoolPassword123"}' https://7nb67d5al6.execute-api.us-east-1.amazonaws.com/test/api/signin
-
-
-## TODOs
-
-Support GET
-
-Check authorization for upload/list; retrieve user ID from token
-
-Implement resizer

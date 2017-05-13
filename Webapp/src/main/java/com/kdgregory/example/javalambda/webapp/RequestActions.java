@@ -17,5 +17,4 @@ public class RequestActions
     public final static String  SIGNIN          = "signin";
     public final static String  SIGNUP          = "signup";
     public final static String  CONFIRM_SIGNUP  = "confirmSignup";
-    public final static String  CHECK_AUTH      = "checkAuth";
 }

@@ -110,4 +110,16 @@ public class Tokens
 
         return result;
     }
+
+
+    /**
+     *  Used for diagnostic output: prints a substring of each token.
+     */
+    @Override
+    public String toString()
+    {
+        return "Tokens(" + ACCESS_TOKEN  + ": " + StringUtil.substr(accessToken, 0, 8) + ", "
+                         + REFRESH_TOKEN + ": " + StringUtil.substr(refreshToken, 0, 8) + ")";
+    }
+
 }
