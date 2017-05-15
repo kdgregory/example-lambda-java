@@ -6,7 +6,7 @@ import static org.junit.Assert.*;
 
 import net.sf.kdgcommons.collections.CollectionUtil;
 
-import com.kdgregory.example.javalambda.webapp.Tokens;
+import com.kdgregory.example.javalambda.webapp.util.Tokens;
 
 
 public class TestTokens

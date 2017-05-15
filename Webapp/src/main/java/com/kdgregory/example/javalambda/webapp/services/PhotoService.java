@@ -13,12 +13,18 @@ import net.sf.kdgcommons.codec.Base64Codec;
 import net.sf.kdgcommons.collections.MapBuilder;
 import net.sf.kdgcommons.lang.StringUtil;
 
-import com.kdgregory.example.javalambda.photomanager.PhotoManager;
-import com.kdgregory.example.javalambda.photomanager.PhotoMetadata;
+import com.amazonaws.services.sns.AmazonSNSClient;
+
+import com.kdgregory.example.javalambda.config.Environment;
+import com.kdgregory.example.javalambda.photomanager.ContentService;
+import com.kdgregory.example.javalambda.photomanager.MetadataService;
+import com.kdgregory.example.javalambda.photomanager.tabledef.Fields;
+import com.kdgregory.example.javalambda.photomanager.tabledef.PhotoKey;
+import com.kdgregory.example.javalambda.photomanager.tabledef.PhotoMetadata;
+import com.kdgregory.example.javalambda.photomanager.tabledef.Sizes;
 import com.kdgregory.example.javalambda.webapp.Request;
 import com.kdgregory.example.javalambda.webapp.Response;
 import com.kdgregory.example.javalambda.webapp.ResponseCodes;
-import com.kdgregory.example.javalambda.webapp.util.Environment;
 
 
 /**
@@ -32,9 +38,9 @@ public class PhotoService
      */
     public static class ParamNames
     {
-        public final static String  FILENAME    = PhotoMetadata.Fields.FILENAME;
-        public final static String  FILETYPE    = PhotoMetadata.Fields.MIMETYPE;
-        public final static String  DESCRIPTION = PhotoMetadata.Fields.DESCRIPTION;
+        public final static String  FILENAME    = Fields.FILENAME;
+        public final static String  FILETYPE    = Fields.MIMETYPE;
+        public final static String  DESCRIPTION = Fields.DESCRIPTION;
         public final static String  FILESIZE    = "filesize";
         public final static String  CONTENT     = "content";
     }
@@ -46,13 +52,19 @@ public class PhotoService
 
     private Logger logger = LoggerFactory.getLogger(getClass());
 
-    private PhotoManager photoManager;
+    private AmazonSNSClient snsClient;
+    private String snsTopicArn;
+    private MetadataService metadataService;
+    private ContentService contentService;
 
 
     public PhotoService()
     {
-        photoManager = new PhotoManager(
-                            Environment.getOrThrow(Environment.DYNAMO_TABLE),
+        snsClient = new AmazonSNSClient();
+        snsTopicArn = Environment.getOrThrow(Environment.SNS_TOPIC_ARN);
+        metadataService = new MetadataService(
+                            Environment.getOrThrow(Environment.DYNAMO_TABLE));
+        contentService = new ContentService(
                             Environment.getOrThrow(Environment.S3_IMAGE_BUCKET),
                             Environment.getOrThrow(Environment.S3_IMAGE_PREFIX));
     }
@@ -71,7 +83,7 @@ public class PhotoService
         logger.debug("listPhotos for user {}", userId);
 
          List<Map<String,Object>> result = new ArrayList<Map<String,Object>>();
-         for (PhotoMetadata item : photoManager.list(userId))
+         for (PhotoMetadata item : metadataService.retrieve(new PhotoKey(userId, null)))
          {
              result.add(item.toClientMap());
          }
@@ -85,13 +97,14 @@ public class PhotoService
      */
     public Response upload(Request request)
     {
+        String photoId = UUID.randomUUID().toString();
         String userId = request.getUser();
 
-        // we'll jam our data into the request body for simplicity
+        // we'll jam our data into the request body ... immutability be damned!
         Map<String,Object> requestBody = new MapBuilder<String,Object>(request.getBody())
-                                         .put(PhotoMetadata.Fields.ID, UUID.randomUUID().toString())
-                                         .put(PhotoMetadata.Fields.USERNAME, userId)
-                                         .put(PhotoMetadata.Fields.UPLOADED_AT, Long.valueOf(System.currentTimeMillis()))
+                                         .put(Fields.ID, photoId)
+                                         .put(Fields.USERNAME, userId)
+                                         .put(Fields.UPLOADED_AT, Long.valueOf(System.currentTimeMillis()))
                                          .toMap();
 
         logger.debug("upload of {} for user {}", requestBody.get(ParamNames.FILENAME), userId);
@@ -128,7 +141,9 @@ public class PhotoService
             return new Response(ResponseCodes.INVALID_OPERATION);
         }
 
-        photoManager.upload(metadata, content);
+        metadataService.store(metadata);
+        contentService.upload(metadata.getId(), metadata.getMimetype(), Sizes.ORIGINAL, content);
+        snsClient.publish(snsTopicArn, new PhotoKey(userId, photoId).toCombinedValue());
 
         return new Response(ResponseCodes.SUCCESS);
     }

@@ -23,11 +23,11 @@ import org.jose4j.keys.resolvers.HttpsJwksVerificationKeyResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.kdgregory.example.javalambda.config.Environment;
 import com.kdgregory.example.javalambda.webapp.Request;
 import com.kdgregory.example.javalambda.webapp.Response;
 import com.kdgregory.example.javalambda.webapp.ResponseCodes;
-import com.kdgregory.example.javalambda.webapp.Tokens;
-import com.kdgregory.example.javalambda.webapp.util.Environment;
+import com.kdgregory.example.javalambda.webapp.util.Tokens;
 
 
 /**

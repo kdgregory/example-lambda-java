@@ -2,9 +2,14 @@
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.kdgregory.example.lambda</groupId>
+
+    <parent>
+        <groupId>com.kdgregory.example.lambda</groupId>
+        <artifactId>parent</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
     <artifactId>photo-manager</artifactId>
-    <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Java-Lambda Photo Manager</name>
@@ -13,19 +18,6 @@
         Manages photo data and metadata. This module is shared between the webapp and
         the resizer.
     </description>
-
-
-    <properties>
-        <!-- build configuration props, because Maven can't pick a sensible default -->
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-
-        <aws-sdk.version>1.11.83</aws-sdk.version>
-        <junit.version>4.10</junit.version>
-        <kdgcommons.version>1.0.15</kdgcommons.version>
-        <log4j.version>1.2.12</log4j.version>
-        <slf4j.version>1.7.8</slf4j.version>
-    </properties>
 
 
     <dependencies>
@@ -59,27 +51,11 @@
             <artifactId>slf4j-log4j12</artifactId>
             <version>${slf4j.version}</version>
         </dependency>
-
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>${junit.version}</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
-                    <debug>true</debug>
-                </configuration>
-            </plugin>
         </plugins>
     </build>
 

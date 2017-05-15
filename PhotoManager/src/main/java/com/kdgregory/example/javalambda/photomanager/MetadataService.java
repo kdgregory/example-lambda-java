@@ -1,9 +1,7 @@
 // Copyright (c) Keith D Gregory, all rights reserved
 package com.kdgregory.example.javalambda.photomanager;
 
-import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -12,35 +10,27 @@ import org.slf4j.LoggerFactory;
 
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.model.*;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.*;
 
-import com.kdgregory.example.javalambda.photomanager.PhotoMetadata.Sizes;
+import com.kdgregory.example.javalambda.photomanager.tabledef.PhotoKey;
+import com.kdgregory.example.javalambda.photomanager.tabledef.PhotoMetadata;
+import com.kdgregory.example.javalambda.photomanager.util.DynamoHelper;
 
 
 /**
- *  This is the service interface for the photo manager; it provides operations to
- *  upload photos and retrieve a list of photos.
+ *  This service supports retrieval and update of photo metadata.
  */
-public class PhotoManager
+public class MetadataService
 {
     private Logger logger = LoggerFactory.getLogger(getClass());
 
-    private AmazonS3Client s3Client;
     private AmazonDynamoDBClient ddbClient;
-
     private String ddbTableName;
-    private String s3BucketName;
-    private String s3ImagePrefix;
 
 
-    public PhotoManager(String ddbTableName, String s3BucketName, String s3ImagePrefix)
+    public MetadataService(String ddbTableName)
     {
-        s3Client = new AmazonS3Client();
         ddbClient = new AmazonDynamoDBClient();
         this.ddbTableName = ddbTableName;
-        this.s3BucketName = s3BucketName;
-        this.s3ImagePrefix = s3ImagePrefix;
     }
 
 
@@ -49,24 +39,25 @@ public class PhotoManager
 //----------------------------------------------------------------------------
 
     /**
-     *  Retrieves a list of photos belonging to the specified user.
+     *  Retrieves the list of photos matching the supplied key. May be none,
+     *  one, or many (if the key only specifies user).
      */
-    public List<PhotoMetadata> list(String user)
+    public List<PhotoMetadata> retrieve(PhotoKey key)
     {
+        logger.debug("retrieving metadata for user {} / id {}", key.getUserId(), key.getPhotoId());
+
         List<PhotoMetadata> result = new ArrayList<PhotoMetadata>();
 
-        Map<String,AttributeValue> expressionValues = new HashMap<>();
-        expressionValues.put(":username", new AttributeValue().withS(user));
         QueryRequest request = new QueryRequest()
                                .withTableName(ddbTableName)
-                               .withKeyConditionExpression(PhotoMetadata.Fields.USERNAME + " = :username")
-                               .withExpressionAttributeValues(expressionValues);
+                               .withKeyConditionExpression(DynamoHelper.queryExpression(key))
+                               .withExpressionAttributeValues(DynamoHelper.queryValues(key));
 
         boolean more = false;
         do
         {
             QueryResult response = ddbClient.query(request);
-            logger.debug("retrieved {} items", response.getCount());
+            logger.debug("retrieved {} items in batch", response.getCount());
             for (Map<String,AttributeValue> item : response.getItems())
             {
                 result.add(PhotoMetadata.fromDynamoMap(item));
@@ -79,16 +70,17 @@ public class PhotoManager
             request.setExclusiveStartKey(lastEvaluatedKey);
         } while (more);
 
+        logger.debug("retrieved {} items total", result.size());
         return result;
     }
 
 
     /**
-     *  Uploads a photo with the given metadata.
+     *  Stores the provided metadata.
      *
-     *  @return The ID of the photo.
+     *  @return flag indicating whether or not the metadata could be stored.
      */
-    public boolean upload(PhotoMetadata metadata, byte[] content)
+    public boolean store(PhotoMetadata metadata)
     {
         if (!metadata.isValid())
         {
@@ -96,19 +88,8 @@ public class PhotoManager
             return false;
         }
 
-        ObjectMetadata s3Meta = new ObjectMetadata();
-        s3Meta.setContentLength(content.length);
-        s3Meta.setContentType(metadata.getMimetype());
-        PutObjectResult s3Response = s3Client.putObject(
-                                        s3BucketName,
-                                        s3ImagePrefix + "/" + metadata.getId() + "/" + Sizes.FULLSIZE.name(),
-                                        new ByteArrayInputStream(content),
-                                        s3Meta);
-
-        logger.debug("upload successful, etag = " + s3Response.getETag());
-
+        logger.debug("storing metadata for user {} / id {}", metadata.getUser(), metadata.getId());
         ddbClient.putItem(ddbTableName, metadata.toDynamoMap());
-
         return true;
     }
 }

@@ -21,6 +21,10 @@ component("main", {
                 }
             }
 
+            self.hasSizes = function(file) {
+                return !! (file && file.sizes && file.sizes.length > 0);
+            }
+
             self.refresh = function() {
                 console.log("refreshing file list");
                 $http.get('api/list')

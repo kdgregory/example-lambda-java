@@ -4,13 +4,14 @@
 # Creates all Lambda functions and the API Gateway, using a CloudFormation script (this script
 # exists to avoid the pain of specifying CloudFormation parameters).
 #
-#   create_lambda.sh BASE_NAME BUCKET_NAME DB_NAME POOL_ID CLIENT_ID
+#   create_lambda.sh BASE_NAME BUCKET_NAME TABLE_NAME TOPIC_NAME POOL_ID CLIENT_ID
 #
 #       BASE_NAME   is the name for this deployment. All AWS objects created by this script
 #                   are named by adding suffixes to this base
 #       BUCKET_NAME is the name of the bucket used for long-term app storage (including
 #                   deployed code)
 #       TABLE_NAME  is the name of the DynamoDB table used to store metadata
+#       TOPIC_NAME  is the name of the SNS topic used to signal the resizer
 #       POOL_ID     is the ID of the Cognito user pool for this app
 #       CLIENT_ID   is the "app" ID used to access the Cognito user pool
 #
@@ -28,8 +29,9 @@ set -e
 BASE_NAME=$1
 BUCKET_NAME=$2
 TABLE_NAME=$3
-COGNITO_POOL_ID=$4
-COGNITO_CLIENT_ID=$5
+TOPIC_NAME=$4
+COGNITO_POOL_ID=$5
+COGNITO_CLIENT_ID=$6
 
 
 cat > ${TMPDIR}/create_lambda_params.json <<EOF
@@ -47,8 +49,16 @@ cat > ${TMPDIR}/create_lambda_params.json <<EOF
     "ParameterValue":   "${TABLE_NAME}"
   },
   {
+    "ParameterKey":     "ResizeTopic",
+    "ParameterValue":   "${TOPIC_NAME}"
+  },
+  {
     "ParameterKey":     "WebappJar",
     "ParameterValue":   "${DEPLOYMENT_PREFIX}/${WEBAPP_FILE}"
+  },
+  {
+    "ParameterKey":     "ResizerJar",
+    "ParameterValue":   "${DEPLOYMENT_PREFIX}/${RESIZER_FILE}"
   },
   {
     "ParameterKey":     "CognitoPoolId",

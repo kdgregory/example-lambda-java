@@ -8,10 +8,17 @@
     <div class="listContainer">
         <table class="photoList">
         <tr ng-repeat="file in $ctrl.fileList">
-            <td> <img src="images/{{file.id}}/FULLSIZE" height="200" width="300" /> </td>
+            <td> <img src="images/{{file.id}}/THUMB" alt="{{file.description}}"/> </td>
             <td> <p> {{file.filename}}
                  <p> {{file.description}}
                  <p> {{$ctrl.dateHelper(file)}}
+                 <p ng-if="$ctrl.hasSizes(file)"> Sizes available:
+                    <span ng-repeat="size in file.sizes">
+                        <a href="images/{{file.id}}/{{size.name}}" target="_blank"> {{size.description}} </a>
+                        <span ng-if="! $last">, </span>
+                        </span>
+                    </p>
+                     
                  </td>
             </tr>
         </table>

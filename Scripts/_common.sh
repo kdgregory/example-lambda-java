@@ -24,8 +24,13 @@ DEPLOYMENT_PREFIX="deployment"
 STATIC_PREFIX="static"
 
 
-# JARfile containing the webapp deployment
+# JARfile containing the webapp
 
-WEBAPP_SOURCE=${HOME}/.m2/repository/com/kdgregory/example/lambda-webapp/1.0-SNAPSHOT/lambda-webapp-1.0-SNAPSHOT.jar
+WEBAPP_SOURCE=${HOME}/.m2/repository/com/kdgregory/example/lambda/webapp/1.0-SNAPSHOT/webapp-1.0-SNAPSHOT.jar
 WEBAPP_FILE=$(basename "${WEBAPP_SOURCE}")
 
+
+# JARfile containing the resizer
+
+RESIZER_SOURCE=${HOME}/.m2/repository/com/kdgregory/example/lambda/resizer/1.0-SNAPSHOT/resizer-1.0-SNAPSHOT.jar
+RESIZER_FILE=$(basename "${RESIZER_SOURCE}")

@@ -7,16 +7,24 @@
             "Description": "Base name for all objects created by this template",
             "Type": "String"
         },
-        "Bucket": {
-            "Description": "Name of the bucket used by the application",
-            "Type": "String"
-        },
         "DynamoTable": {
             "Description": "Name of the DynamoDB table used to store metadata",
             "Type": "String"
         },
+        "ResizeTopic": {
+            "Description": "Name of the SNS topic used to notify the resizer of a new image",
+            "Type": "String"
+        },
+        "Bucket": {
+            "Description": "Name of the bucket used by the application",
+            "Type": "String"
+        },
         "WebappJar": {
-            "Description": "Fully-qualified path to the WebApp deployment JAR",
+            "Description": "Bucket key for the WebApp deployment JAR",
+            "Type": "String"
+        },
+        "ResizerJar": {
+            "Description": "Bucket key for the Resizer deployment JAR",
             "Type": "String"
         },
         "CognitoPoolId": {
@@ -31,7 +39,15 @@
 
     "Resources": {
 
-        "CloudwatchLogGroup": {
+        "ResizeNotificationTopic": {
+            "Type" : "AWS::SNS::Topic",
+            "Properties" : {
+                "TopicName":    { "Ref":     "ResizeTopic" },
+                "DisplayName":  { "Fn::Sub": "Used by the ${BaseName} example to notify the resizer of new images" }
+            }
+        },
+
+        "WebappLogGroup": {
             "Type" : "AWS::Logs::LogGroup",
             "DeletionPolicy" : "Delete",
             "Properties" : {
@@ -56,7 +72,7 @@
                 },
                 "Policies": [
                     {
-                        "PolicyName":       { "Fn::Sub": "${BaseName}-LambdaCloudwatchPolicy" },
+                        "PolicyName":       { "Fn::Sub": "${BaseName}-WebappCloudwatchPolicy" },
                         "PolicyDocument":   {
                             "Version":      "2012-10-17",
                             "Statement":    [
@@ -76,7 +92,7 @@
                                             ]
                         }
                     }, {
-                        "PolicyName":       { "Fn::Sub": "${BaseName}-LambdaCognitoPolicy" },
+                        "PolicyName":       { "Fn::Sub": "${BaseName}-WebappCognitoPolicy" },
                         "PolicyDocument":   {
                             "Version":      "2012-10-17",
                             "Statement":    [
@@ -90,7 +106,7 @@
                                             ]
                         }
                     }, {
-                        "PolicyName":       { "Fn::Sub": "${BaseName}-LambdaDynamoPolicy" },
+                        "PolicyName":       { "Fn::Sub": "${BaseName}-WebappDynamoPolicy" },
                         "PolicyDocument":   {
                             "Version":      "2012-10-17",
                             "Statement":    [
@@ -106,7 +122,21 @@
                                             ]
                         }
                     }, {
-                        "PolicyName":       { "Fn::Sub": "${BaseName}-LambdaBucketPolicy" },
+                        "PolicyName":       { "Fn::Sub": "${BaseName}-WebappSNSPolicy" },
+                        "PolicyDocument":   {
+                            "Version":      "2012-10-17",
+                            "Statement":    [
+                                                {
+                                                    "Effect": "Allow",
+                                                    "Action": [
+                                                        "SNS:Publish"
+                                                    ],
+                                                    "Resource": [ { "Ref": "ResizeNotificationTopic" } ]
+                                                }
+                                            ]
+                        }
+                    }, {
+                        "PolicyName":       { "Fn::Sub": "${BaseName}-WebappBucketPolicy" },
                         "PolicyDocument":   {
                             "Version" :     "2012-10-17",
                             "Statement":    [
@@ -146,6 +176,7 @@
                         "COGNITO_POOL_ID":   { "Ref": "CognitoPoolId" },
                         "COGNITO_CLIENT_ID": { "Ref": "CognitoClientId" },
                         "DYNAMO_TABLE":      { "Ref": "DynamoTable" },
+                        "SNS_TOPIC_ARN":     { "Ref": "ResizeNotificationTopic" },
                         "S3_IMAGE_BUCKET":   { "Ref": "Bucket" },
                         "S3_IMAGE_PREFIX":   "images"
                     }
@@ -163,10 +194,10 @@
             }
         },
 
-        "GatewayBucketRole": {
+        "GatewayExecutionRole": {
             "Type": "AWS::IAM::Role",
             "Properties": {
-                "RoleName": { "Fn::Sub": "${BaseName}-GatewayBucketRole" },
+                "RoleName": { "Fn::Sub": "${BaseName}-GatewayExecutionRole" },
                 "Path": "/service-role/",
                 "AssumeRolePolicyDocument": {
                     "Version": "2012-10-17",
@@ -214,7 +245,7 @@
                                               }
                                             },
                                             "x-amazon-apigateway-integration": {
-                                              "credentials": "arn:aws:iam::717623742438:role/service-role/LambdaPhoto-GatewayBucketRole",
+                                              "credentials": "arn:aws:iam::717623742438:role/service-role/LambdaPhoto-GatewayExecutionRole",
                                               "responses": {
                                                 "default": {
                                                   "statusCode": "200"
@@ -305,7 +336,7 @@
                                               }
                                             },
                                             "x-amazon-apigateway-integration": {
-                                              "credentials": "arn:aws:iam::717623742438:role/service-role/LambdaPhoto-GatewayBucketRole",
+                                              "credentials": "arn:aws:iam::717623742438:role/service-role/LambdaPhoto-GatewayExecutionRole",
                                               "responses": {
                                                 "default": {
                                                   "statusCode": "200"
@@ -359,7 +390,7 @@
                                               }
                                             },
                                             "x-amazon-apigateway-integration": {
-                                              "credentials": "arn:aws:iam::717623742438:role/service-role/LambdaPhoto-GatewayBucketRole",
+                                              "credentials": "arn:aws:iam::717623742438:role/service-role/LambdaPhoto-GatewayExecutionRole",
                                               "responses": {
                                                 "default": {
                                                   "statusCode": "200",
@@ -403,7 +434,7 @@
                                               }
                                             },
                                             "x-amazon-apigateway-integration": {
-                                              "credentials": "arn:aws:iam::717623742438:role/service-role/LambdaPhoto-GatewayBucketRole",
+                                              "credentials": "arn:aws:iam::717623742438:role/service-role/LambdaPhoto-GatewayExecutionRole",
                                               "responses": {
                                                 "default": {
                                                   "statusCode": "200"
@@ -441,7 +472,7 @@
                                               }
                                             },
                                             "x-amazon-apigateway-integration": {
-                                              "credentials": "arn:aws:iam::717623742438:role/service-role/LambdaPhoto-GatewayBucketRole",
+                                              "credentials": "arn:aws:iam::717623742438:role/service-role/LambdaPhoto-GatewayExecutionRole",
                                               "responses": {
                                                 "default": {
                                                   "statusCode": "200"
@@ -481,6 +512,139 @@
                 "StageDescription": {
                 }
             }
+        },
+
+        "ResizerLogGroup": {
+            "Type" : "AWS::Logs::LogGroup",
+            "DeletionPolicy" : "Delete",
+            "Properties" : {
+                "LogGroupName" : { "Fn::Sub": "/aws/lambda/${BaseName}-Resizer" },
+                "RetentionInDays" : 7
+            }
+        },
+
+
+        "ResizerExecutionRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "RoleName": { "Fn::Sub": "${BaseName}-ResizerExecutionRole" },
+                "Path": "/service-role/",
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": {
+                        "Effect":   "Allow",
+                        "Action":   [ "sts:AssumeRole" ],
+                        "Principal": { "Service": [ "lambda.amazonaws.com" ] }
+                    }
+                },
+                "Policies": [
+                    {
+                        "PolicyName":       { "Fn::Sub": "${BaseName}-ResizerCloudwatchPolicy" },
+                        "PolicyDocument":   {
+                            "Version":      "2012-10-17",
+                            "Statement":    [
+                                                {
+                                                    "Effect":   "Allow",
+                                                    "Action":   [ "logs:CreateLogGroup" ],
+                                                    "Resource": [ { "Fn::Sub": "arn:aws:logs:*:${AWS::AccountId}:*" } ]
+                                                },
+                                                {
+                                                    "Effect": "Allow",
+                                                    "Action": [
+                                                        "logs:CreateLogStream",
+                                                        "logs:PutLogEvents"
+                                                    ],
+                                                    "Resource": [ { "Fn::Sub": "arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/lambda/${BaseName}-Resizer:*" } ]
+                                                }
+                                            ]
+                        }
+                    }, {
+                        "PolicyName":       { "Fn::Sub": "${BaseName}-ResizerDynamoPolicy" },
+                        "PolicyDocument":   {
+                            "Version":      "2012-10-17",
+                            "Statement":    [
+                                                {
+                                                    "Effect": "Allow",
+                                                    "Action": [
+                                                        "dynamodb:GetItem",
+                                                        "dynamodb:PutItem",
+                                                        "dynamodb:Query"
+                                                    ],
+                                                    "Resource": [ { "Fn::Sub": "arn:aws:dynamodb:*:${AWS::AccountId}:table/${DynamoTable}" } ]
+                                                }
+                                            ]
+                        }
+                    }, {
+                        "PolicyName":       { "Fn::Sub": "${BaseName}-ResizerBucketPolicy" },
+                        "PolicyDocument":   {
+                            "Version" :     "2012-10-17",
+                            "Statement":    [
+                                                {
+                                                    "Effect":   "Allow",
+                                                    "Action":   [ "s3:Get*", "s3:Put*" ],
+                                                    "Resource": { "Fn::Sub": "arn:aws:s3:::${Bucket}/images/*" }
+                                                }
+                                            ]
+                        }
+                    }
+                ]
+            }
+        },
+
+        "ResizerLambdaFunction": {
+            "Type":         "AWS::Lambda::Function",
+            "DependsOn":    [ "ResizerExecutionRole" ],
+            "Properties": {
+                "Description": "Implements the resizer portion of the example",
+                "Runtime": "java8",
+                "FunctionName": { "Fn::Sub": "${BaseName}-Resizer" },
+                "Code": {
+                    "S3Bucket": { "Ref": "Bucket" },
+                    "S3Key":    { "Ref": "ResizerJar" }
+                },
+                "Role": { "Fn::GetAtt" : [ "ResizerExecutionRole", "Arn" ] },
+                "Handler": "com.kdgregory.example.javalambda.resizer.Resizer::handler",
+                "MemorySize": 256,
+                "Timeout": 30,
+                "Environment": {
+                    "Variables": {
+                        "DYNAMO_TABLE":      { "Ref": "DynamoTable" },
+                        "S3_IMAGE_BUCKET":   { "Ref": "Bucket" },
+                        "S3_IMAGE_PREFIX":   "images"
+                    }
+                }
+            }
+        },
+
+        "ResizerSubscription": {
+            "Type":             "AWS::SNS::Subscription",
+            "DependsOn":        [ "ResizerLambdaFunction", "ResizeNotificationTopic" ],
+            "Properties" :      {
+                "Protocol":     "lambda",
+                "Endpoint":     { "Fn::GetAtt": [ "ResizerLambdaFunction", "Arn" ] },
+                "TopicArn":     { "Ref": "ResizeNotificationTopic" }
+            }
+        },
+
+
+        "ResizerInvocationPermission": {
+            "Type":             "AWS::Lambda::Permission",
+            "Properties": {
+                "Action":       "lambda:InvokeFunction",
+                "FunctionName": { "Fn::GetAtt": [ "ResizerLambdaFunction", "Arn" ] },
+                "Principal":    "sns.amazonaws.com",
+                "SourceArn":    { "Ref": "ResizeNotificationTopic" }
+            }
+        }
+    },
+
+
+    "Outputs": {
+
+        "ResizeNotificationTopicOutput": {
+            "Description":  "SNS topic used to notify the resizer of new images",
+            "Value":        { "Ref": "ResizeNotificationTopic" },
+            "Export":       { "Name": { "Fn::Sub": "${BaseName}-ResizeNotificationTopic" }}
         }
     }
 }

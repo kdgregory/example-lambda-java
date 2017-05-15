@@ -14,6 +14,7 @@ import com.kdgregory.example.javalambda.webapp.Request.HttpMethod;
 import com.kdgregory.example.javalambda.webapp.services.PhotoService;
 import com.kdgregory.example.javalambda.webapp.services.UnhandledServiceException;
 import com.kdgregory.example.javalambda.webapp.services.UserService;
+import com.kdgregory.example.javalambda.webapp.util.Tokens;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +36,7 @@ public class Dispatcher
     private UserService userService = new UserService();
     private PhotoService photoService = new PhotoService();
 
-    
+
 //----------------------------------------------------------------------------
 //  Public methods
 //----------------------------------------------------------------------------
@@ -65,7 +66,7 @@ public class Dispatcher
         }
     }
 
-    
+
 //----------------------------------------------------------------------------
 //  Internals
 //----------------------------------------------------------------------------
@@ -87,7 +88,7 @@ public class Dispatcher
         String action      = (String)CollectionUtil.getVia(proxyRequest, "pathParameters", "action");
         String tokenHeader = (String)CollectionUtil.getVia(proxyRequest, "headers", "Cookie");
         String body        = (String)CollectionUtil.getVia(proxyRequest, "body");
-        
+
         // body will be empty on GET, but rather than have separate code paths I'll give a dummy value
         if (StringUtil.isEmpty(body))
         {
@@ -136,8 +137,8 @@ public class Dispatcher
                 return new Response(404);
         }
     }
-    
-    
+
+
     /**
      *  Verifies that the request matches the desired method, and if yes dispatches
      *  to the provided function.
@@ -148,8 +149,8 @@ public class Dispatcher
              ? f.apply(req)
              : new Response(ResponseCodes.INVALID_REQUEST);
     }
-    
-    
+
+
     /**
      *  Returns a function that checks authorization before invoking passed function.
      *  This is intended to be passed to {@link invokeIf}, as a semi-DSL.
