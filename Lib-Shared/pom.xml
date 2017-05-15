@@ -2,21 +2,20 @@
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-
     <parent>
         <groupId>com.kdgregory.example.lambda</groupId>
         <artifactId>parent</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>photo-manager</artifactId>
+    <artifactId>lib-shared</artifactId>
     <packaging>jar</packaging>
 
-    <name>Java-Lambda Photo Manager</name>
+    <name>Shared Components</name>
 
     <description>
-        Manages photo data and metadata. This module is shared between the webapp and
-        the resizer.
+        Contains components shared between Webapp and Resizer. Chief among these
+        are the services for managing photo data and metadata.
     </description>
 
 

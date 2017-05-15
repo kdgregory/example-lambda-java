@@ -8,20 +8,20 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>resizer</artifactId>
+    <artifactId>webapp-lambda</artifactId>
     <packaging>jar</packaging>
 
-    <name>Java-Lambda Resizer</name>
+    <name>Java-Lambda Webapp</name>
 
     <description>
-        A background lambda function that responds to new image uploads by resizing them
+        An example web-application using a Java handler for AWS Lambda.
     </description>
 
 
     <dependencies>
         <dependency>
             <groupId>com.kdgregory.example.lambda</groupId>
-            <artifactId>photo-manager</artifactId>
+            <artifactId>lib-shared</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -35,6 +35,26 @@
             <version>${aws-lambda-logger.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-cognitoidp</artifactId>
+            <version>${aws-sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-sns</artifactId>
+            <version>${aws-sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
             <version>${log4j.version}</version>
@@ -43,6 +63,11 @@
             <groupId>net.sf.kdgcommons</groupId>
             <artifactId>kdgcommons</artifactId>
             <version>${kdgcommons.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bitbucket.b_c</groupId>
+            <artifactId>jose4j</artifactId>
+            <version>${jose4j.version}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>

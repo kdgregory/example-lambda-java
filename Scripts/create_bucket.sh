@@ -40,6 +40,6 @@ aws s3 rm s3://${BUCKET_NAME}/${STATIC_PREFIX} --recursive
 aws s3 cp ${WEBAPP_SOURCE} s3://${BUCKET_NAME}/${DEPLOYMENT_PREFIX}/${WEBAPP_FILE}
 aws s3 cp ${RESIZER_SOURCE} s3://${BUCKET_NAME}/${DEPLOYMENT_PREFIX}/${RESIZER_FILE}
 
-pushd Static
+pushd Webapp-Static
 aws s3 cp . s3://${BUCKET_NAME}/${STATIC_PREFIX} --recursive
 popd

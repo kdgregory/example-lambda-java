@@ -15,9 +15,9 @@
 
 
     <modules>
-        <module>PhotoManager</module>
-        <module>Webapp</module>
-        <module>Resizer</module>
+        <module>Lib-Shared</module>
+        <module>Webapp-Lambda</module>
+        <module>Resizer-Lambda</module>
     </modules>
 
 
