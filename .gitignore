@@ -16,3 +16,8 @@ buildNumber.properties
 
 # vim
 .*.swp
+
+# project-specific
+
+swagger.json
+cfparams.json

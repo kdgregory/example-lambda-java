@@ -70,59 +70,74 @@ All file metadata is stored in a DynamoDB table that has the following attribute
 The client is a single-page application using AngularJS 1.x.
 
 
-## Building and Running
+## Building and Deploying
 
-### Building the software
+### Building the Java components
 
 The Java components are built using Maven, with all dependencies available from Maven Central.
 
-    ( cd Webapp ; mvn clean install )
+    mvn clean install
 
 ### Deploying to AWS
 
-Deploying the application is a multi-step process. Parts are handled by CloudFormation, and parts are handled by shell scripts.
-Run all scripts from the project root directory
+Deploying the application is a multi-step process. It largely depends on CloudFormation, but
+there are a few components that have to be customized or created in advance. Fortunately,
+it's all wrapped up in a shell script:
 
-1. Create the bucket and deploy the static files and web-app.
-    ```
-    Scripts/create_bucket.sh BUCKET_NAME
-    ```
+    Scripts/deploy.sh BASE_NAME BUCKET_NAME
 
-    Invoke with the name of the bucket that you want to use. If the bucket already exists, the existing
-    files in the deployment and static directories will be removed before the new files are uploaded.
+* `BASE_NAME` is a unique prefix for the deployed components; I use `LambdaPhoto`.
+* `BUCKET_NAME` is the name of an S3 bucket that is used by the application. This name has
+  to be globally unique in the S3 world; I recommend an inverse-hostname approach similar
+  to Java packages (eg: `com-example-lambda` -- although that's probably already in use).
 
-    This script will look in your local Maven repository to find the deployment JARs for Lambda, so you
-    must have built those JARs before running it.
+To run this script you also need to define environment variables with your access key and
+region:
 
-2. Create the Cognito user pool.
+* `AWS_ACCESS_KEY`
+* `AWS_SECRET_KEY`
+* `AWS_REGION`
 
-    ```
-    Scripts/create_cognito.sh POOL_NAME
-    ```
+Assuming that all runs, you'll see a bunch of messages as the script generates and copies
+the deployment scripts, and it should end with a CloudFormation message like the following:
 
-    This script will create the pool and also a single client application with the same name. The pool will apply
-    some basic password rules: a mix of uppercase, lowercase, and numbers, with at least 8 characters.
+    {
+        "StackId": "arn:aws:cloudformation:us-east-1:999999999999:stack/Example/a0ccd440-3a37-11e7-89ed-50d5ca6e60e6"
+    }
 
-    When you run the script it will output the pool ID and client ID; you'll need these for the final step.
+At this point you've created two AWS resources, a bucket and a CloudFormation stack. You'll
+have to manually delete these when you're done with the example.
 
-3. Create the metadata table
+The CloudFormation stack in turn creates all other components. You can monitor its progress
+via the [AWS Console](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks?filter=active)
+(if you're not in the `us-east-1` region you'll need to switch regions after clicking that
+link). It will take several minutes to create all of the components, at which time the stack
+status will change to `CREATE_COMPLETE`.
 
-    This creates a minimal DynamoDB table that will be used to store photo metadata.
-
-    ```
-    Scripts/create_dynamo.sh TABLE_NAME
-    ```
-
-4. Create the API Gateway and Lambda procs.
-
-    ```
-    Scripts/create_lambda.sh BASE_NAME BUCKET_NAME TABLE_NAME POOL_ID CLIENT_ID
-    ```
-
-    This step requires the IDs from step 2 and the names from steps 1 and 3, and uses them to parameterize
-    a CloudFormation script.
+There aren't a lot of reasons for the stack creation to fail: the most common that I experienced
+was because I didn't build the Java packages beforehand. It's also possible that you don't
+have the permissions required to create a stack (this is likely in a corporate environment,
+unlikely if it's your personal account). In any case, if you see `ROLLBACK_COMPLETE` as the
+stack status you'll need to figure out what went wrong (look through the events), correct
+it if you can, delete the failed stack, and retry.
 
 
-### Invoking via CURL
+### Smoketest
 
-    curl -v -c /tmp/cookies.dat -H 'Content-Type: application/json' -d '{"email": "example@mailinator.com", "password": "MyCoolPassword123"}' https://7nb67d5al6.execute-api.us-east-1.amazonaws.com/test/api/signin
+Curl is your new best friend:
+
+    curl -v -c /tmp/cookies.dat -H 'Content-Type: application/json' -d '{"email": "example@mailinator.com", "password": "MyCoolPassword123"}' https://ENDPOINT.execute-api.us-east-1.amazonaws.com/test/api/signin
+
+You'll need to replace `ENDPOINT` with the actual DNS name of the endpoint, but the rest of the
+request doesn't matter: in a new deployment you won't have any users. If everything's working,
+this request should result in something like the following, and you'll see CloudWatch logs for
+the Webapp lambda function.
+
+    * Hostname was NOT found in DNS cache
+    *   Trying 52.84.86.47...
+    * Connected to 7nr07tcg55.execute-api.us-east-1.amazonaws.com (52.84.86.47) port 443 (#0)
+    ...
+    * upload completely sent off: 68 out of 68 bytes
+    < HTTP/1.1 200 OK
+    ...
+    {"data":null,"description":"Incorrect username or password","responseCode":"INVALID_USER"}
