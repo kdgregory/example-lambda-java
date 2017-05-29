@@ -1,73 +1,36 @@
-# LambdaPhoto - A Java Web-app Running on AWS Lambda
+# LambdaPhoto 
 
-## System Architecture
+This project is a simple photo-sharing site with the following features:
 
-**TBD**
+* Self-signup for users
+* Each user can upload as many photos as they want
+* Each photo will be resized to some standard "web" sizes.
+* Users can share or embed photos via link
 
+It was originally written to support a [presentation](Docs/jug_presentation.pdf)
+for the [Philadelphia Java Users Group](https://www.meetup.com/PhillyJUG/), focused
+on how you would use Java with AWS Lambda.
 
-## Static Content
-
-Static content is stored on S3, using the same bucket as photo storage and deployment bundles. It is (currently)
-delivered using API Gateway.
-
-
-## Web-App Implementation
-
-The web-app is implemented as a single Lambda function, that expects and returns JSON formatted per the API Gateway
-Proxy [docs](http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-set-up-simple-proxy.html).
-
-The `Dispatcher` extracts information from the standard request JSON, creating a `Request` object. It then invokes
-an appropriate service method, based on the last component of the URL (which API Gateway extracts into the `action`
-path parameter). The service method creates a `Response` object, which the dispatcher packages into the API Gateway
-format.
-
-The dispatcher will return 200 if it can process the request, whether or not the outcome is successful from the
-client perspective. It returns the following status codes (and no response body) if unable to process the request:
-
-* 400 to indicate any error with the request content (generally, an untranslateable body).
-  Translateable-but-incorrect body content will typically be reported using a non-success
-  response code.
-* 404 to indicate an invalid endpoint.
-* 500 to indicate an unexpected server error. The cause will be logged.
-
-Request bodies are defined by the service being called (and may not exist). Response bodies have the following fields:
-
-| Field                 | Description |
-|-----------------------|-------------|
-| `responseCode`        | A string that describes the result of the operation. The value "SUCCESS" indicates success everywhere; other values are service-specific. |
-| `description`         | Text to display to the user in the event of a non-success response. |
-| `data`                | Action-specific data object. This may be a any JSON-serializable type, but will generally be a map or list. Operations that do not return data may omit this field entirely. |
+As such, **it should not be considered production code**. In particular, don't use
+API Gateway to serve static content, use CloudFront. On the other hand, I think the
+Java side is a reasonable implementation.
 
 
-### Authentication
+## Architecture Diagram
 
-User management and authentication is handled by Cognito IDP. Any user is allowed to sign up for the service, by
-providing a valid email address (the service sends a temporary password to that address).
-
-After successiful sign-in, the service provides access and refresh tokens, which are managed as HTTP-only cookies.
-Any response may include `Set-Cookie` headers, as a result of token refresh.
-
-**TBD**: describe handling of authenticated requests.
+![Architecture Diagram](Docs/architecture.png)
 
 
-## Database
+## What's in the Package
 
-All file metadata is stored in a DynamoDB table that has the following attributes:
-
-| Attribute Name    | Description
-|-------------------|------------
-| `id`              | Unique identifier for the file, assigned during upload.
-| `user`            | User that owns the file. Also assigned during upload, based on logged-in user.
-| `filename`        | The original filename.
-| `description`     | User-provided description.
-| `mimetype`        | The standard MIME type for the file.
-| `uploadedAt`      | The millis-since-epoch timestamp when the file was uploaded.
-| `sizes`           | An array(string) that identifies the various resolutions that have been saved for the file. Includes `fullsize` and a collection of `WxH` smaller sizes.
-
-
-## Client Implementation
-
-The client is a single-page application using AngularJS 1.x.
+* `Docs`              - Additional implementation documentation.
+* `Lib-Shared`        - Code that is shared between the WebApp and Resizer (the DynamoDB and S3 code lives here).
+* `pom.xml`           - Maven build file.
+* `README.md`         - This file.
+* `Resizer-Lambda`    - A Lambda function that resizes photos in response to a message on SNS.
+* `Scripts`           - Deployment scripts (see below).
+* `Webapp-Lambda`     - A Lambda function that implements a simple WebApp.
+* `Webapp-Static`     - Static content for the WebApp.
 
 
 ## Building and Deploying
@@ -77,6 +40,7 @@ The client is a single-page application using AngularJS 1.x.
 The Java components are built using Maven, with all dependencies available from Maven Central.
 
     mvn clean install
+
 
 ### Deploying to AWS
 
