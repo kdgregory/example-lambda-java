@@ -449,10 +449,58 @@
 
     "Outputs": {
 
+        "CognitoUserPoolOutput": {
+            "Description":  "Cognito pool for application users",
+            "Value":        { "Ref": "CognitoUserPool" },
+            "Export":       { "Name": { "Fn::Sub": "${BaseName}-CognitoUserPool" }}
+        },
+
+        "CognitoUserPoolClientOutput": {
+            "Description":  "Cognito client for application users",
+            "Value":        { "Ref": "CognitoUserPoolClient" },
+            "Export":       { "Name": { "Fn::Sub": "${BaseName}-CognitoUserPoolClient" }}
+        },
+
+        "DynamoMetadataTableOutput": {
+            "Description":  "DynamoDB table holding photo metadata",
+            "Value":        { "Ref": "DynamoMetadataTable" },
+            "Export":       { "Name": { "Fn::Sub": "${BaseName}-DynamoMetadataTable" }}
+        },
+
         "ResizeNotificationTopicOutput": {
             "Description":  "SNS topic used to notify the resizer of new images",
             "Value":        { "Ref": "ResizeNotificationTopic" },
             "Export":       { "Name": { "Fn::Sub": "${BaseName}-ResizeNotificationTopic" }}
+        },
+
+        "GatewayOutput": {
+            "Description":  "API Gateway REST API",
+            "Value":        { "Ref": "Gateway" },
+            "Export":       { "Name": { "Fn::Sub": "${BaseName}-Gateway" }}
+        },
+
+        "WebappLambdaFunctionOutput": {
+            "Description":  "Lambda function implementing the web-app",
+            "Value":        { "Ref": "WebappLambdaFunction" },
+            "Export":       { "Name": { "Fn::Sub": "${BaseName}-WebappLambdaFunction" }}
+        },
+
+        "WebappLogGroupOutput": {
+            "Description":  "CloudWatch log group for the web-app lambda function",
+            "Value":        { "Ref": "WebappLogGroup" },
+            "Export":       { "Name": { "Fn::Sub": "${BaseName}-WebappLogGroup" }}
+        },
+
+        "ResizerLambdaFunctionOutput": {
+            "Description":  "Lambda function implementing the resizer",
+            "Value":        { "Ref": "ResizerLambdaFunction" },
+            "Export":       { "Name": { "Fn::Sub": "${BaseName}-ResizerLambdaFunction" }}
+        },
+
+        "ResizerLogGroupOutput": {
+            "Description":  "CloudWatch log group for the resizer lambda function",
+            "Value":        { "Ref": "ResizerLogGroup" },
+            "Export":       { "Name": { "Fn::Sub": "${BaseName}-ResizerLogGroup" }}
         }
     }
 }
