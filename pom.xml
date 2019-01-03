@@ -29,7 +29,7 @@
         <!-- all dependency versions are specified here -->
         <aws-lambda-core.version>1.1.0</aws-lambda-core.version>
         <aws-lambda-logger.version>1.0.0</aws-lambda-logger.version>
-        <aws-sdk.version>1.11.83</aws-sdk.version>
+        <aws-sdk.version>1.11.476</aws-sdk.version>
         <jackson.version>2.8.5</jackson.version>
         <jose4j.version>0.5.4</jose4j.version>
         <junit.version>4.10</junit.version>

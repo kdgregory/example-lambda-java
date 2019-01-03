@@ -9,7 +9,8 @@ import org.slf4j.LoggerFactory;
 
 import net.sf.kdgcommons.io.IOUtil;
 
-import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.*;
 
 import com.kdgregory.example.javalambda.photomanager.tabledef.Sizes;
@@ -22,13 +23,13 @@ public class ContentService
 {
     private Logger logger = LoggerFactory.getLogger(getClass());
 
-    private AmazonS3Client s3Client;
+    private AmazonS3 s3Client;
     private String s3BucketName;
     private String s3ImagePrefix;
 
     public ContentService(String s3BucketName, String s3ImagePrefix)
     {
-        s3Client = new AmazonS3Client();
+        s3Client = AmazonS3ClientBuilder.defaultClient();
         this.s3BucketName = s3BucketName;
         this.s3ImagePrefix = s3ImagePrefix;
     }

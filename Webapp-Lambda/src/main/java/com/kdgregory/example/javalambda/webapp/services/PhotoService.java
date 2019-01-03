@@ -13,7 +13,8 @@ import net.sf.kdgcommons.codec.Base64Codec;
 import net.sf.kdgcommons.collections.MapBuilder;
 import net.sf.kdgcommons.lang.StringUtil;
 
-import com.amazonaws.services.sns.AmazonSNSClient;
+import com.amazonaws.services.sns.AmazonSNS;
+import com.amazonaws.services.sns.AmazonSNSClientBuilder;
 
 import com.kdgregory.example.javalambda.config.Environment;
 import com.kdgregory.example.javalambda.photomanager.ContentService;
@@ -52,7 +53,7 @@ public class PhotoService
 
     private Logger logger = LoggerFactory.getLogger(getClass());
 
-    private AmazonSNSClient snsClient;
+    private AmazonSNS snsClient;
     private String snsTopicArn;
     private MetadataService metadataService;
     private ContentService contentService;
@@ -60,7 +61,7 @@ public class PhotoService
 
     public PhotoService()
     {
-        snsClient = new AmazonSNSClient();
+        snsClient = AmazonSNSClientBuilder.defaultClient();
         snsTopicArn = Environment.getOrThrow(Environment.SNS_TOPIC_ARN);
         metadataService = new MetadataService(
                             Environment.getOrThrow(Environment.DYNAMO_TABLE));

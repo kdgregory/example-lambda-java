@@ -5,7 +5,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
-import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProviderClient;
+import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProvider;
+import com.amazonaws.services.cognitoidp.AWSCognitoIdentityProviderClientBuilder;
 import com.amazonaws.services.cognitoidp.model.*;
 
 import net.sf.kdgcommons.lang.StringUtil;
@@ -53,7 +54,7 @@ public class UserService
 
     private Logger logger = LoggerFactory.getLogger(getClass());
 
-    private AWSCognitoIdentityProviderClient cognitoClient;
+    private AWSCognitoIdentityProvider cognitoClient;
     private JwtConsumer jwtConsumer;
 
     private String cognitoPoolId;
@@ -62,7 +63,7 @@ public class UserService
 
     public UserService()
     {
-        cognitoClient = new AWSCognitoIdentityProviderClient();
+        cognitoClient = AWSCognitoIdentityProviderClientBuilder.defaultClient();
         cognitoPoolId = Environment.getOrThrow(Environment.COGNITO_POOL_ID);
         cognitoClientId = Environment.getOrThrow(Environment.COGNITO_CLIENT_ID);
     }

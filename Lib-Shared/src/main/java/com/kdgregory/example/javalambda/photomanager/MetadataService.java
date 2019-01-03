@@ -8,7 +8,8 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.model.*;
 
 import com.kdgregory.example.javalambda.photomanager.tabledef.PhotoKey;
@@ -23,13 +24,13 @@ public class MetadataService
 {
     private Logger logger = LoggerFactory.getLogger(getClass());
 
-    private AmazonDynamoDBClient ddbClient;
+    private AmazonDynamoDB ddbClient;
     private String ddbTableName;
 
 
     public MetadataService(String ddbTableName)
     {
-        ddbClient = new AmazonDynamoDBClient();
+        ddbClient = AmazonDynamoDBClientBuilder.defaultClient();
         this.ddbTableName = ddbTableName;
     }
 
