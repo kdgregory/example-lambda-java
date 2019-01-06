@@ -25,14 +25,15 @@ AWS_ACCOUNT_ID=$(aws sts get-caller-identity | grep "Account" | sed -e 's/"//g' 
 DEPLOYMENT_PREFIX="deployment"
 STATIC_PREFIX="static"
 
+
 # JARfile containing the webapp
 
-WEBAPP_PATH=${HOME}/.m2/repository/com/kdgregory/example/lambda/webapp-lambda/1.0-SNAPSHOT/webapp-lambda-1.0-SNAPSHOT.jar
+WEBAPP_PATH=Webapp-Lambda/target/webapp-lambda-*.jar
 WEBAPP_FILE=$(basename "${WEBAPP_PATH}")
 
 # JARfile containing the resizer
 
-RESIZER_PATH=${HOME}/.m2/repository/com/kdgregory/example/lambda/resizer-lambda/1.0-SNAPSHOT/resizer-lambda-1.0-SNAPSHOT.jar
+RESIZER_PATH=Resizer-Lambda/target/resizer-lambda-*.jar
 RESIZER_FILE=$(basename "${RESIZER_PATH}")
 
 # the generated Swagger spec
