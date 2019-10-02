@@ -25,9 +25,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.kdgregory.example.javalambda.config.Environment;
-import com.kdgregory.example.javalambda.webapp.Request;
-import com.kdgregory.example.javalambda.webapp.Response;
-import com.kdgregory.example.javalambda.webapp.ResponseCodes;
+import com.kdgregory.example.javalambda.webapp.util.Request;
+import com.kdgregory.example.javalambda.webapp.util.Response;
+import com.kdgregory.example.javalambda.webapp.util.ResponseCodes;
 import com.kdgregory.example.javalambda.webapp.util.Tokens;
 
 

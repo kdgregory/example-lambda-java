@@ -23,9 +23,9 @@ import com.kdgregory.example.javalambda.photomanager.tabledef.Fields;
 import com.kdgregory.example.javalambda.photomanager.tabledef.PhotoKey;
 import com.kdgregory.example.javalambda.photomanager.tabledef.PhotoMetadata;
 import com.kdgregory.example.javalambda.photomanager.tabledef.Sizes;
-import com.kdgregory.example.javalambda.webapp.Request;
-import com.kdgregory.example.javalambda.webapp.Response;
-import com.kdgregory.example.javalambda.webapp.ResponseCodes;
+import com.kdgregory.example.javalambda.webapp.util.Request;
+import com.kdgregory.example.javalambda.webapp.util.Response;
+import com.kdgregory.example.javalambda.webapp.util.ResponseCodes;
 
 
 /**

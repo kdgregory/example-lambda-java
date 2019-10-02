@@ -10,11 +10,15 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.kdgregory.example.javalambda.webapp.Request.HttpMethod;
 import com.kdgregory.example.javalambda.webapp.services.PhotoService;
 import com.kdgregory.example.javalambda.webapp.services.UnhandledServiceException;
 import com.kdgregory.example.javalambda.webapp.services.UserService;
+import com.kdgregory.example.javalambda.webapp.util.Request;
+import com.kdgregory.example.javalambda.webapp.util.RequestActions;
+import com.kdgregory.example.javalambda.webapp.util.Response;
+import com.kdgregory.example.javalambda.webapp.util.ResponseCodes;
 import com.kdgregory.example.javalambda.webapp.util.Tokens;
+import com.kdgregory.example.javalambda.webapp.util.Request.HttpMethod;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

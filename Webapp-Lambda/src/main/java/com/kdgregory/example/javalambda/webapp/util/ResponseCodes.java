@@ -1,5 +1,5 @@
 // Copyright (c) Keith D Gregory, all rights reserved
-package com.kdgregory.example.javalambda.webapp;
+package com.kdgregory.example.javalambda.webapp.util;
 
 /**
  *  All response codes and their descriptions. Note that codes may not
