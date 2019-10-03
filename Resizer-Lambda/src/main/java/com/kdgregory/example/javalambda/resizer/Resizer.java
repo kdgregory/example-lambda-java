@@ -79,13 +79,13 @@ public class Resizer
 //  Internals
 //----------------------------------------------------------------------------
 
-    private void process(PhotoKey photoKey)
+    private void process(PhotoKey key)
     {
-        PhotoMetadata metadata = CollectionUtil.first(metadataService.retrieve(photoKey));
+        PhotoMetadata metadata = CollectionUtil.first(metadataService.retrieve(key.getUserId(), key.getPhotoId()));
         if (metadata == null)
             return;
 
-        byte[] content = contentService.download(photoKey.getPhotoId(), Sizes.ORIGINAL);
+        byte[] content = contentService.download(key.getPhotoId(), Sizes.ORIGINAL);
         if (content == null)
             return;
 

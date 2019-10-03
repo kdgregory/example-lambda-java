@@ -84,7 +84,7 @@ public class PhotoService
         logger.debug("listPhotos for user {}", userId);
 
          List<Map<String,Object>> result = new ArrayList<Map<String,Object>>();
-         for (PhotoMetadata item : metadataService.retrieve(new PhotoKey(userId, null)))
+         for (PhotoMetadata item : metadataService.retrieve(userId, null))
          {
              result.add(item.toClientMap());
          }

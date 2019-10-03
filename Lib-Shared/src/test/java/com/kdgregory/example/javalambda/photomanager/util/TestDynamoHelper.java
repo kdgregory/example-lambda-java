@@ -11,8 +11,6 @@ import static org.junit.Assert.*;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 
-import com.kdgregory.example.javalambda.photomanager.tabledef.PhotoKey;
-
 
 public class TestDynamoHelper
 {
@@ -50,12 +48,10 @@ public class TestDynamoHelper
     @Test
     public void testQueryHelpersUsernameOnly() throws Exception
     {
-        PhotoKey key = new PhotoKey("foo", null);
-
         assertEquals("query expression", "username = :username",
-                                         DynamoHelper.queryExpression(key));
+                                         DynamoHelper.queryExpression("foo", null));
 
-        Map<String,AttributeValue> queryTerms = DynamoHelper.queryValues(key);
+        Map<String,AttributeValue> queryTerms = DynamoHelper.queryValues("foo", null);
         assertEquals("terms includes user ID",           "foo", queryTerms.get(":username").getS());
         assertEquals("terms does not include photo ID",  null,  queryTerms.get(":photo_id"));
     }
@@ -64,15 +60,11 @@ public class TestDynamoHelper
     @Test
     public void testQueryHelpersBothFields() throws Exception
     {
-        PhotoKey key = new PhotoKey("foo", "bar");
-
         assertEquals("query expression", "username = :username AND id = :photo_id",
-                                         DynamoHelper.queryExpression(key));
+                                         DynamoHelper.queryExpression("foo", "bar"));
 
-        Map<String,AttributeValue> queryTerms = DynamoHelper.queryValues(key);
+        Map<String,AttributeValue> queryTerms = DynamoHelper.queryValues("foo", "bar");
         assertEquals("terms includes user ID",  "foo", queryTerms.get(":username").getS());
         assertEquals("terms includes photo ID", "bar", queryTerms.get(":photo_id").getS());
     }
-
-
 }

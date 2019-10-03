@@ -12,7 +12,6 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.model.*;
 
-import com.kdgregory.example.javalambda.photomanager.tabledef.PhotoKey;
 import com.kdgregory.example.javalambda.photomanager.tabledef.PhotoMetadata;
 import com.kdgregory.example.javalambda.photomanager.util.DynamoHelper;
 
@@ -43,16 +42,16 @@ public class MetadataService
      *  Retrieves the list of photos matching the supplied key. May be none,
      *  one, or many (if the key only specifies user).
      */
-    public List<PhotoMetadata> retrieve(PhotoKey key)
+    public List<PhotoMetadata> retrieve(String userId, String photoId)
     {
-        logger.debug("retrieving metadata for user {} / id {}", key.getUserId(), key.getPhotoId());
+        logger.debug("retrieving metadata for user {} / id {}", userId, photoId);
 
         List<PhotoMetadata> result = new ArrayList<PhotoMetadata>();
 
         QueryRequest request = new QueryRequest()
                                .withTableName(ddbTableName)
-                               .withKeyConditionExpression(DynamoHelper.queryExpression(key))
-                               .withExpressionAttributeValues(DynamoHelper.queryValues(key));
+                               .withKeyConditionExpression(DynamoHelper.queryExpression(userId, photoId))
+                               .withExpressionAttributeValues(DynamoHelper.queryValues(userId, photoId));
 
         boolean more = false;
         do
