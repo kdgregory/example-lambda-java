@@ -37,12 +37,7 @@ public class PhotoMetadata
     private Set<Sizes> sizes;
 
 
-    /**
-     *  Single constructor: either we get a map of simple objects from the
-     *  client, or a map of AttributeValue objects from Dynamo. Unfortunately
-     *  there's no way to
-     */
-    private PhotoMetadata(String id, String user, String filename, String mimeType, String description, Long uploadedAt, Collection<String> sizes)
+    public PhotoMetadata(String id, String user, String filename, String mimeType, String description, Long uploadedAt, Collection<String> sizes)
     {
         this.id = id;
         this.user = user;

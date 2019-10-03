@@ -2,6 +2,7 @@
 package com.kdgregory.example.javalambda.webapp.services;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -10,7 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.sf.kdgcommons.codec.Base64Codec;
-import net.sf.kdgcommons.collections.MapBuilder;
 import net.sf.kdgcommons.lang.StringUtil;
 
 import com.amazonaws.services.sns.AmazonSNS;
@@ -81,7 +81,7 @@ public class PhotoService
     public Response listPhotos(Request request)
     {
         String userId = request.getUser();
-        logger.debug("listPhotos for user {}", userId);
+        logger.info("listPhotos: user {}", userId);
 
          List<Map<String,Object>> result = new ArrayList<Map<String,Object>>();
          for (PhotoMetadata item : metadataService.retrieve(userId, null))
@@ -98,29 +98,31 @@ public class PhotoService
      */
     public Response upload(Request request)
     {
-        String photoId = UUID.randomUUID().toString();
+        Map<String,Object> requestBody = request.getBody();
         String userId = request.getUser();
+        String filename = (String)requestBody.get(ParamNames.FILENAME);
+        String photoId = UUID.randomUUID().toString();
 
-        // we'll jam our data into the request body ... immutability be damned!
-        Map<String,Object> requestBody = new MapBuilder<String,Object>(request.getBody())
-                                         .put(Fields.ID, photoId)
-                                         .put(Fields.USERNAME, userId)
-                                         .put(Fields.UPLOADED_AT, Long.valueOf(System.currentTimeMillis()))
-                                         .toMap();
+        logger.info("upload: user {}, filename {}, photo {}", userId, filename, photoId);
 
-        logger.debug("upload of {} for user {}", requestBody.get(ParamNames.FILENAME), userId);
-
-        PhotoMetadata metadata = PhotoMetadata.fromClientMap(requestBody);
+        PhotoMetadata metadata = new PhotoMetadata(
+                                    photoId,
+                                    userId,
+                                    filename,
+                                    (String)requestBody.get(Fields.MIMETYPE),
+                                    (String)requestBody.get(Fields.DESCRIPTION),
+                                    Long.valueOf(System.currentTimeMillis()),
+                                    Arrays.asList(Sizes.ORIGINAL.name()));
         if (! metadata.isValid())
         {
-            logger.debug("missing metadata; provided keys: {}", requestBody.keySet());
+            logger.warn("missing metadata; provided keys: {}", requestBody.keySet());
             return new Response(ResponseCodes.INVALID_OPERATION);
         }
 
         String base64Content = (String)request.getBody().get(ParamNames.CONTENT);
         if (base64Content == null)
         {
-            logger.debug("missing content");
+            logger.warn("missing content");
             return new Response(ResponseCodes.INVALID_OPERATION);
         }
 
