@@ -1,12 +1,7 @@
 // Copyright (c) Keith D Gregory, all rights reserved
 package com.kdgregory.example.javalambda.photomanager.tabledef;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import net.sf.kdgcommons.lang.StringUtil;
-
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 
 /**
  *  Holds the key used to store photo metadata in Dynamo.
@@ -73,13 +68,7 @@ public class PhotoKey
      *  the standard attribute names prefaced with colons (eg: ":username"),
      *  and a null is omitted.
      */
-    public Map<String,AttributeValue> toDynamoMap()
-    {
-        Map<String,AttributeValue> result = new HashMap<>();
-        if (!StringUtil.isBlank(userId))    result.put(":" + Fields.USERNAME, new AttributeValue().withS(userId));
-        if (!StringUtil.isBlank(photoId))   result.put(":" + Fields.ID,       new AttributeValue().withS(photoId));
-        return result;
-    }
+
 
 
 //----------------------------------------------------------------------------
