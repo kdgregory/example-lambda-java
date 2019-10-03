@@ -44,7 +44,7 @@ public class MetadataService
      */
     public List<PhotoMetadata> retrieve(String userId, String photoId)
     {
-        logger.debug("retrieving metadata for user {} / id {}", userId, photoId);
+        logger.info("retrieving metadata for user {} photo {}", userId, photoId);
 
         List<PhotoMetadata> result = new ArrayList<PhotoMetadata>();
 
@@ -88,7 +88,7 @@ public class MetadataService
             return false;
         }
 
-        logger.debug("storing metadata for user {} / id {}", metadata.getUser(), metadata.getId());
+        logger.info("storing metadata for user {} photo {}", metadata.getUser(), metadata.getId());
         ddbClient.putItem(ddbTableName, metadata.toDynamoMap());
         return true;
     }
