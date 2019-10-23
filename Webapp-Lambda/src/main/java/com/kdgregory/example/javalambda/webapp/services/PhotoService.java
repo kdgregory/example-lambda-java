@@ -15,12 +15,13 @@ import net.sf.kdgcommons.lang.StringUtil;
 
 import com.amazonaws.services.sns.AmazonSNS;
 import com.amazonaws.services.sns.AmazonSNSClientBuilder;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.kdgregory.example.javalambda.config.Environment;
+import com.kdgregory.example.javalambda.messages.PhotoUploaded;
 import com.kdgregory.example.javalambda.photomanager.ContentService;
 import com.kdgregory.example.javalambda.photomanager.MetadataService;
 import com.kdgregory.example.javalambda.photomanager.tabledef.Fields;
-import com.kdgregory.example.javalambda.photomanager.tabledef.PhotoKey;
 import com.kdgregory.example.javalambda.photomanager.tabledef.PhotoMetadata;
 import com.kdgregory.example.javalambda.photomanager.tabledef.Sizes;
 import com.kdgregory.example.javalambda.webapp.util.Request;
@@ -54,6 +55,7 @@ public class PhotoService
     private Logger logger = LoggerFactory.getLogger(getClass());
 
     private AmazonSNS snsClient;
+    private ObjectMapper objectMapper;
     private String snsTopicArn;
     private MetadataService metadataService;
     private ContentService contentService;
@@ -62,6 +64,7 @@ public class PhotoService
     public PhotoService()
     {
         snsClient = AmazonSNSClientBuilder.defaultClient();
+        objectMapper = new ObjectMapper();
         snsTopicArn = Environment.getOrThrow(Environment.SNS_TOPIC_ARN);
         metadataService = new MetadataService(
                             Environment.getOrThrow(Environment.DYNAMO_TABLE));
@@ -146,7 +149,18 @@ public class PhotoService
 
         metadataService.store(metadata);
         contentService.upload(metadata.getId(), metadata.getMimetype(), Sizes.ORIGINAL, content);
-        snsClient.publish(snsTopicArn, new PhotoKey(userId, photoId).toCombinedValue());
+
+        try
+        {
+            String uploadMessage = objectMapper.writeValueAsString(new PhotoUploaded(userId, photoId));
+            snsClient.publish(snsTopicArn, uploadMessage);
+        }
+        catch (Exception ex)
+        {
+            logger.error("unable to write message to SNS: user {}, filename {}, photo {}", userId, filename, photoId, ex);
+            // FIXME - this should just throw
+            return new Response(ResponseCodes.INTERNAL_ERROR);
+        }
 
         return new Response(ResponseCodes.SUCCESS);
     }
