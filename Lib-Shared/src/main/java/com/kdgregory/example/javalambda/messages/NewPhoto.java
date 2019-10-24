@@ -9,13 +9,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 /**
  *  This message is sent to the Resizer whenever a new photo is uploaded.
  */
-public class PhotoUploaded
+public class NewPhoto
 {
     private String userId;
     private String photoId;
 
     @JsonCreator
-    public PhotoUploaded(
+    public NewPhoto(
         @JsonProperty("userId") String userId,
         @JsonProperty("photoId") String photoId)
     {

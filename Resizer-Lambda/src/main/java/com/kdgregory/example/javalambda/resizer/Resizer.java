@@ -24,7 +24,7 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.kdgregory.example.javalambda.config.Environment;
-import com.kdgregory.example.javalambda.messages.PhotoUploaded;
+import com.kdgregory.example.javalambda.messages.NewPhoto;
 import com.kdgregory.example.javalambda.services.content.ContentService;
 import com.kdgregory.example.javalambda.services.metadata.MetadataService;
 import com.kdgregory.example.javalambda.services.metadata.PhotoMetadata;
@@ -66,7 +66,7 @@ public class Resizer
             String content = (String)CollectionUtil.getVia(record, "Sns", "Message");
             try
             {
-                PhotoUploaded photo = objectMapper.readValue(content, PhotoUploaded.class);
+                NewPhoto photo = objectMapper.readValue(content, NewPhoto.class);
                 process(photo.getUserId(), photo.getPhotoId());
             }
             catch (Exception ex)

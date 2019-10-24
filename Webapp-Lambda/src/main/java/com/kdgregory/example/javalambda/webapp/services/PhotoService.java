@@ -18,7 +18,7 @@ import com.amazonaws.services.sns.AmazonSNSClientBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.kdgregory.example.javalambda.config.Environment;
-import com.kdgregory.example.javalambda.messages.PhotoUploaded;
+import com.kdgregory.example.javalambda.messages.NewPhoto;
 import com.kdgregory.example.javalambda.services.content.ContentService;
 import com.kdgregory.example.javalambda.services.metadata.Fields;
 import com.kdgregory.example.javalambda.services.metadata.MetadataService;
@@ -152,7 +152,7 @@ public class PhotoService
 
         try
         {
-            String uploadMessage = objectMapper.writeValueAsString(new PhotoUploaded(userId, photoId));
+            String uploadMessage = objectMapper.writeValueAsString(new NewPhoto(userId, photoId));
             snsClient.publish(snsTopicArn, uploadMessage);
         }
         catch (Exception ex)
