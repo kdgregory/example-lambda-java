@@ -1,5 +1,5 @@
 // Copyright (c) Keith D Gregory, all rights reserved
-package com.kdgregory.example.javalambda.photomanager;
+package com.kdgregory.example.javalambda.services.content;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -13,7 +13,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.*;
 
-import com.kdgregory.example.javalambda.photomanager.tabledef.Sizes;
+import com.kdgregory.example.javalambda.services.metadata.Sizes;
 
 
 /**

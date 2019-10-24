@@ -1,5 +1,5 @@
 // Copyright (c) Keith D Gregory, all rights reserved
-package com.kdgregory.example.javalambda.photomanager.tabledef;
+package com.kdgregory.example.javalambda.services.metadata;
 
 import java.util.HashMap;
 import java.util.Map;

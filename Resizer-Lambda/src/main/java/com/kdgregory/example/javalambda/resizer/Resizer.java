@@ -25,10 +25,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.kdgregory.example.javalambda.config.Environment;
 import com.kdgregory.example.javalambda.messages.PhotoUploaded;
-import com.kdgregory.example.javalambda.photomanager.ContentService;
-import com.kdgregory.example.javalambda.photomanager.MetadataService;
-import com.kdgregory.example.javalambda.photomanager.tabledef.PhotoMetadata;
-import com.kdgregory.example.javalambda.photomanager.tabledef.Sizes;
+import com.kdgregory.example.javalambda.services.content.ContentService;
+import com.kdgregory.example.javalambda.services.metadata.MetadataService;
+import com.kdgregory.example.javalambda.services.metadata.PhotoMetadata;
+import com.kdgregory.example.javalambda.services.metadata.Sizes;
 
 
 /**

@@ -1,5 +1,5 @@
 // Copyright (c) Keith D Gregory, all rights reserved
-package com.kdgregory.example.javalambda.photomanager.util;
+package com.kdgregory.example.javalambda.util;
 
 import java.util.Collection;
 import java.util.Collections;

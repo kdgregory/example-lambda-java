@@ -1,5 +1,5 @@
 // Copyright (c) Keith D Gregory, all rights reserved
-package com.kdgregory.example.javalambda.photomanager.tabledef;
+package com.kdgregory.example.javalambda.services.metadata;
 
 import java.util.Collections;
 import java.util.EnumSet;
@@ -9,7 +9,9 @@ import java.util.Map;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 
-import com.kdgregory.example.javalambda.photomanager.tabledef.PhotoMetadata;
+import com.kdgregory.example.javalambda.services.metadata.Fields;
+import com.kdgregory.example.javalambda.services.metadata.PhotoMetadata;
+import com.kdgregory.example.javalambda.services.metadata.Sizes;
 
 import org.junit.Test;
 import static org.junit.Assert.*;

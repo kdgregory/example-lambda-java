@@ -1,5 +1,5 @@
 // Copyright (c) Keith D Gregory, all rights reserved
-package com.kdgregory.example.javalambda.photomanager.util;
+package com.kdgregory.example.javalambda.util;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -10,6 +10,8 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+
+import com.kdgregory.example.javalambda.util.DynamoHelper;
 
 
 public class TestDynamoHelper
