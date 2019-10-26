@@ -61,6 +61,8 @@ public class Resizer
     public void handler(Map<String,Object> message, Context lambdaContext)
     {
         List<Map<String,Object>> records = (List<Map<String,Object>>)message.get("Records");
+        logger.info("received {} messages", records.size());
+
         for (Map<String,Object> record : records)
         {
             String content = (String)CollectionUtil.getVia(record, "Sns", "Message");
@@ -86,15 +88,17 @@ public class Resizer
         logger.info("processing: user {} photo {}", userId, photoId);
         PhotoMetadata metadata = CollectionUtil.first(metadataService.retrieve(userId, photoId));
         if (metadata == null)
+        {
+            logger.warn("no metadata for photo {}; skipping resize", photoId);
             return;
+        }
 
-        byte[] content = contentService.download(photoId, Sizes.ORIGINAL);
-        if (content == null)
-            return;
-
-        BufferedImage img = loadImage(content);
+        BufferedImage img = loadImage(photoId);
         if (img == null)
+        {
+            logger.warn("no content for photo {}; skipping resize", photoId);
             return;
+        }
 
         for (Sizes size : Sizes.values())
         {
@@ -112,18 +116,22 @@ public class Resizer
      *  Loads the content bytes into a buffered image and returns it, null if unable to
      *  load the image.
      */
-    private BufferedImage loadImage(byte[] content)
+    private BufferedImage loadImage(String photoId)
     {
+        byte[] content = contentService.download(photoId, Sizes.ORIGINAL);
+        if (content == null)
+            return null;
+
         try
         {
             BufferedImage img = ImageIO.read(new ByteArrayInputStream(content));
-            logger.debug("downloaded original file size = {}, width = {}, height = {}",
+            logger.debug("original file size = {}, width = {}, height = {}",
                          content.length, img.getWidth(), img.getHeight());
             return img;
         }
         catch (Exception ex)
         {
-            logger.warn("unable to load image", ex);
+            // this will be logged by caller
             return null;
         }
     }

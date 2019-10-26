@@ -44,13 +44,16 @@ public class ContentService
      */
     public byte[] download(String photoId, Sizes size)
     {
+        logger.debug("retrieving content for photo {}, size {}", photoId, size);
         S3Object s3Obj = null;
         try
         {
             s3Obj = s3Client.getObject(s3BucketName, s3Key(photoId, size));
             ByteArrayOutputStream buf = new ByteArrayOutputStream();
             IOUtil.copy(s3Obj.getObjectContent(), buf);
-            return buf.toByteArray();
+            byte[] content = buf.toByteArray();
+            logger.debug("retrieved {} bytes for photo {}", content.length, photoId);
+            return content;
         }
         catch (Exception ex)
         {
@@ -62,14 +65,14 @@ public class ContentService
             if (s3Obj != null)  IOUtil.closeQuietly(s3Obj.getObjectContent());
         }
     }
-    
-    
+
+
     /**
      *  Stores the content for a photo.
      */
     public void upload(String photoId, String mimeType, Sizes size, byte[] content)
     {
-        logger.debug("uploading photo: id = {}, size = {}, content-length = {}",
+        logger.debug("uploading: photo {}, size = {}, content-length = {}",
                      photoId, size.name(), content.length);
 
         ObjectMetadata s3Meta = new ObjectMetadata();
@@ -81,14 +84,14 @@ public class ContentService
                                         new ByteArrayInputStream(content),
                                         s3Meta);
 
-        logger.debug("upload successful, etag = " + s3Response.getETag());
+        logger.debug("upload successful: photo {}, etag {}", photoId, s3Response.getETag());
     }
 
-    
+
 //----------------------------------------------------------------------------
 //  Internals
 //----------------------------------------------------------------------------
-    
+
     /**
      *  Returns the storage path for an object.
      */

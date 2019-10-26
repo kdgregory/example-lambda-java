@@ -56,7 +56,7 @@ public class Dispatcher
         }
         catch (IllegalArgumentException ex)
         {
-            logger.warn(ex.getMessage());
+            logger.warn("invalid client request", ex.getMessage());
             return buildResponseMap(new Response(400));
         }
         catch (UnhandledServiceException ignored)

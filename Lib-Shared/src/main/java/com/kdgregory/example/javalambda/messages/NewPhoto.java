@@ -32,7 +32,7 @@ public class NewPhoto
 //  Accessors
 //----------------------------------------------------------------------------
 
-    @JsonProperty("userId") 
+    @JsonProperty("userId")
     public String getUserId()
     {
         return userId;

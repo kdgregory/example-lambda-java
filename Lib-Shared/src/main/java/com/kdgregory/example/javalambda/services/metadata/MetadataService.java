@@ -43,7 +43,7 @@ public class MetadataService
      */
     public List<PhotoMetadata> retrieve(String userId, String photoId)
     {
-        logger.info("retrieving metadata for user {} photo {}", userId, photoId);
+        logger.debug("retrieving metadata for user {}, photo {}", userId, photoId);
 
         List<PhotoMetadata> result = new ArrayList<PhotoMetadata>();
 
@@ -69,7 +69,7 @@ public class MetadataService
             request.setExclusiveStartKey(lastEvaluatedKey);
         } while (more);
 
-        logger.debug("retrieved {} items total", result.size());
+        logger.debug("retrieved {} items for photo {}", result.size(), photoId);
         return result;
     }
 
@@ -81,13 +81,12 @@ public class MetadataService
      */
     public boolean store(PhotoMetadata metadata)
     {
+        logger.debug("storing metadata for user {}, photo {}", metadata.getUser(), metadata.getId());
         if (!metadata.isValid())
         {
-            logger.warn("upload called with invalid metadata: " + metadata);
+            logger.warn("upload called with invalid metadata: {}", metadata);
             return false;
         }
-
-        logger.info("storing metadata for user {} photo {}", metadata.getUser(), metadata.getId());
         ddbClient.putItem(ddbTableName, metadata.toDynamoMap());
         return true;
     }
