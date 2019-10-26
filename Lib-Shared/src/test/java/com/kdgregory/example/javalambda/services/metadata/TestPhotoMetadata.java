@@ -9,9 +9,9 @@ import java.util.Map;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 
-import com.kdgregory.example.javalambda.services.metadata.Fields;
-import com.kdgregory.example.javalambda.services.metadata.PhotoMetadata;
-import com.kdgregory.example.javalambda.services.metadata.Sizes;
+import com.kdgregory.example.javalambda.shared.services.metadata.Fields;
+import com.kdgregory.example.javalambda.shared.services.metadata.PhotoMetadata;
+import com.kdgregory.example.javalambda.shared.services.metadata.Sizes;
 
 import org.junit.Test;
 import static org.junit.Assert.*;

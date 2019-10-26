@@ -1,5 +1,5 @@
 // Copyright (c) Keith D Gregory, all rights reserved
-package com.kdgregory.example.javalambda.services.metadata;
+package com.kdgregory.example.javalambda.shared.services.metadata;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,7 +12,7 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.model.*;
 
-import com.kdgregory.example.javalambda.util.DynamoHelper;
+import com.kdgregory.example.javalambda.shared.util.DynamoHelper;
 
 
 /**

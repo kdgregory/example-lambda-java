@@ -24,7 +24,7 @@ import org.jose4j.keys.resolvers.HttpsJwksVerificationKeyResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.kdgregory.example.javalambda.config.Environment;
+import com.kdgregory.example.javalambda.shared.config.Environment;
 import com.kdgregory.example.javalambda.webapp.util.Request;
 import com.kdgregory.example.javalambda.webapp.util.Response;
 import com.kdgregory.example.javalambda.webapp.util.ResponseCodes;

@@ -1,5 +1,5 @@
 // Copyright (c) Keith D Gregory, all rights reserved
-package com.kdgregory.example.javalambda.messages;
+package com.kdgregory.example.javalambda.shared.messages;
 
 import net.sf.kdgcommons.lang.StringUtil;
 

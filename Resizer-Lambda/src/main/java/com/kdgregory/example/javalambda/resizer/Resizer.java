@@ -23,12 +23,12 @@ import net.sf.kdgcommons.collections.CollectionUtil;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.kdgregory.example.javalambda.config.Environment;
-import com.kdgregory.example.javalambda.messages.NewPhoto;
-import com.kdgregory.example.javalambda.services.content.ContentService;
-import com.kdgregory.example.javalambda.services.metadata.MetadataService;
-import com.kdgregory.example.javalambda.services.metadata.PhotoMetadata;
-import com.kdgregory.example.javalambda.services.metadata.Sizes;
+import com.kdgregory.example.javalambda.shared.config.Environment;
+import com.kdgregory.example.javalambda.shared.messages.NewPhoto;
+import com.kdgregory.example.javalambda.shared.services.content.ContentService;
+import com.kdgregory.example.javalambda.shared.services.metadata.MetadataService;
+import com.kdgregory.example.javalambda.shared.services.metadata.PhotoMetadata;
+import com.kdgregory.example.javalambda.shared.services.metadata.Sizes;
 
 
 /**
