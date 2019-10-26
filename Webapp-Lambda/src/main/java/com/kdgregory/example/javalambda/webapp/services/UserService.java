@@ -76,14 +76,16 @@ public class UserService
      *  case, we need to retain the refresh token from an earlier request, so
      *  give the option of passing in existing tokens.
      */
-    private Tokens createAuthTokens(Tokens existing, AuthenticationResultType authResult)
+    private Tokens extractTokensFromAuthResult(Tokens existing, AuthenticationResultType authResult)
     {
         if (existing == null)
         {
+            logger.debug("creating new tokens");
             return new Tokens(authResult.getAccessToken(), authResult.getRefreshToken());
         }
         else
         {
+            logger.debug("updating tokens from auth result");
             return new Tokens(authResult.getAccessToken(), existing.getRefreshToken());
         }
     }
@@ -196,7 +198,7 @@ public class UserService
             if (StringUtil.isBlank(authResponse.getChallengeName()))
             {
                 logger.debug("signIn: success: {}", emailAddress);
-                return new Response(createAuthTokens(null, authResponse.getAuthenticationResult()));
+                return new Response(extractTokensFromAuthResult(null, authResponse.getAuthenticationResult()));
             }
             else if (ChallengeNameType.NEW_PASSWORD_REQUIRED.name().equals(authResponse.getChallengeName()))
             {
@@ -348,7 +350,7 @@ public class UserService
             if (StringUtil.isBlank(challengeResponse.getChallengeName()))
             {
                 logger.debug("confirmSignUp: success: {}", emailAddress);
-                return new Response(createAuthTokens(null, challengeResponse.getAuthenticationResult()));
+                return new Response(extractTokensFromAuthResult(null, challengeResponse.getAuthenticationResult()));
             }
             else
             {
@@ -392,7 +394,7 @@ public class UserService
 
         if (StringUtil.isBlank(accessToken) || StringUtil.isBlank(refreshToken))
         {
-            logger.debug("missing tokens -- {}; forcing re-auth", request.getTokens());
+            logger.debug("missing tokens; forcing re-auth");
             return new Response(ResponseCodes.NOT_AUTHENTICATED);
         }
 
@@ -404,10 +406,11 @@ public class UserService
             {
                 logger.debug("checkAuthorization: success: {}", username);
                 request.setUser(username);
-                return op.apply(request);
+                return new Response(op.apply(request), request.getTokens());
             }
             else
             {
+                logger.debug("checkAuthorization: need to refresh tokens");
                 Tokens tokens = attemptRefresh(request.getTokens());
                 if (tokens == null)
                 {
@@ -415,7 +418,6 @@ public class UserService
                 }
                 else
                 {
-                    logger.debug("attempting auth check again with {}", tokens);
                     request.setTokens(tokens);
                     return invokeCheckedOperation(request, op);
                 }
@@ -456,7 +458,7 @@ public class UserService
                 if (username != null)
                 {
                     logger.debug("attemptRefresh: success: {}", username);
-                    return createAuthTokens(existingTokens, authResult);
+                    return extractTokensFromAuthResult(existingTokens, authResult);
                 }
                 else
                 {
