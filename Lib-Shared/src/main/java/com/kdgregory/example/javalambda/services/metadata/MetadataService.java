@@ -59,7 +59,14 @@ public class MetadataService
             logger.debug("retrieved {} items in batch", response.getCount());
             for (Map<String,AttributeValue> item : response.getItems())
             {
-                result.add(PhotoMetadata.fromDynamoMap(item));
+                try
+                {
+                    result.add(PhotoMetadata.fromDynamoMap(item));
+                }
+                catch (Exception ex)
+                {
+                    logger.error("invalid metadata in Dynamo: {}", item);
+                }
             }
 
             // the documentation says this will be empty if there are no more records to retrieve,

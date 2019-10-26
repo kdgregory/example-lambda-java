@@ -12,7 +12,7 @@ public enum Sizes
 {
     ORIGINAL    (  -1,  -1,     "original"),
     THUMB       ( 180,  180,    "thumbnail"),
-    W1023H768   (1024,  768,    "1024 x 768"),
+    W1024H768   (1024,  768,    "1024 x 768"),
     W640H480    ( 640,  480,    "640 x 480"); 
     
     
