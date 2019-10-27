@@ -30,6 +30,21 @@
             <version>${aws-lambda-core.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-xray-recorder-sdk-core</artifactId>
+            <version>${aws-xray.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-xray-recorder-sdk-aws-sdk</artifactId>
+            <version>${aws-xray.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-xray-recorder-sdk-aws-sdk-instrumentor</artifactId>
+            <version>${aws-xray.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.kdgregory.logging</groupId>
             <artifactId>log4j1-aws-appenders</artifactId>
             <version>${com-kdgregory-logging.version}</version>
