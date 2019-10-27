@@ -18,10 +18,6 @@
         "ResizerJar": {
             "Description":  "Bucket key for the Resizer deployment JAR",
             "Type":         "String"
-        },
-        "SwaggerSpec": {
-            "Description":  "Bucket key for the API Gateway spec",
-            "Type":         "String"
         }
     },
 
@@ -259,69 +255,6 @@
             }
         },
 
-        "GatewayLambdaPermission": {
-            "Type":                 "AWS::Lambda::Permission",
-            "DependsOn":            [ "WebappLambdaFunction" ],
-            "Properties": {
-                "Action":           "lambda:InvokeFunction",
-                "FunctionName":     { "Fn::GetAtt": ["WebappLambdaFunction", "Arn"] },
-                "Principal":        "apigateway.amazonaws.com"
-            }
-        },
-
-        "GatewayExecutionRole": {
-            "Type": "AWS::IAM::Role",
-            "Properties": {
-                "RoleName": { "Fn::Sub": "${BaseName}-GatewayExecutionRole" },
-                "Path": "/service-role/",
-                "AssumeRolePolicyDocument": {
-                    "Version": "2012-10-17",
-                    "Statement": {
-                        "Effect":   "Allow",
-                        "Action":   [ "sts:AssumeRole" ],
-                        "Principal": { "Service": [ "apigateway.amazonaws.com" ] }
-                    }
-                },
-                "Policies": [
-                    {
-                        "PolicyName":       { "Fn::Sub": "${BaseName}-GatewayBucketPolicy" },
-                        "PolicyDocument": {
-                            "Version" :     "2012-10-17",
-                            "Statement": [{
-                                "Effect":   "Allow",
-                                "Action":   [ "s3:Get*" ],
-                                "Resource": { "Fn::Sub": "arn:aws:s3:::${Bucket}/*" }
-                            }]
-                        }
-                    }
-                ]
-            }
-        },
-
-        "Gateway": {
-            "Type":                 "AWS::ApiGateway::RestApi",
-            "Properties": {
-                "Name":             { "Fn::Sub": "${BaseName}" },
-                "Description":      "A photo-sharing API fronting Lambda and S3",
-                "BodyS3Location": {
-                    "Bucket":       { "Ref" : "Bucket" },
-                    "Key":          { "Ref" : "SwaggerSpec" }
-                }
-            }
-        },
-
-
-        "GatewayDeployment": {
-            "Type":                 "AWS::ApiGateway::Deployment",
-            "Properties": {
-                "Description":      "Test deployment of the LambdaPhoto API",
-                "RestApiId":        { "Ref": "Gateway" },
-                "StageName":        "test",
-                "StageDescription": {
-                }
-            }
-        },
-
         "ResizerLogGroup": {
             "Type" : "AWS::Logs::LogGroup",
             "DeletionPolicy" : "Delete",
@@ -471,12 +404,6 @@
             "Description":  "SNS topic used to notify the resizer of new images",
             "Value":        { "Ref": "ResizeNotificationTopic" },
             "Export":       { "Name": { "Fn::Sub": "${BaseName}-ResizeNotificationTopic" }}
-        },
-
-        "GatewayOutput": {
-            "Description":  "API Gateway REST API",
-            "Value":        { "Ref": "Gateway" },
-            "Export":       { "Name": { "Fn::Sub": "${BaseName}-Gateway" }}
         },
 
         "WebappLambdaFunctionOutput": {
