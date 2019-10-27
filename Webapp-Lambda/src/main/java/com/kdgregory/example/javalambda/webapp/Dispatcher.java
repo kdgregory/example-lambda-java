@@ -22,6 +22,7 @@ import com.kdgregory.example.javalambda.webapp.util.Request.HttpMethod;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import net.sf.kdgcommons.collections.CollectionUtil;
 import net.sf.kdgcommons.lang.StringUtil;
@@ -47,6 +48,9 @@ public class Dispatcher
 
     public Map<String,Object> handler(Map<String,Object> proxyRequest, Context lambdaContext)
     {
+        MDC.clear();
+        MDC.put("requestId", lambdaContext.getAwsRequestId());
+
         try
         {
             // this is the only place we pull pieces out of the AWS request so forego constants

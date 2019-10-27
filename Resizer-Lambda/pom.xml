@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.kdgregory.example.lambda</groupId>
         <artifactId>parent</artifactId>
-        <version>1.1.0</version>
+        <version>1.1.1</version>
     </parent>
 
     <artifactId>resizer-lambda</artifactId>
@@ -31,8 +31,23 @@
         </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
-            <artifactId>aws-lambda-java-log4j</artifactId>
-            <version>${aws-lambda-logger.version}</version>
+            <artifactId>aws-xray-recorder-sdk-core</artifactId>
+            <version>${aws-xray.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-xray-recorder-sdk-aws-sdk</artifactId>
+            <version>${aws-xray.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-xray-recorder-sdk-aws-sdk-instrumentor</artifactId>
+            <version>${aws-xray.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.kdgregory.logging</groupId>
+            <artifactId>log4j1-aws-appenders</artifactId>
+            <version>${com-kdgregory-logging.version}</version>
         </dependency>
         <dependency>
             <groupId>log4j</groupId>
@@ -43,11 +58,6 @@
             <groupId>net.sf.kdgcommons</groupId>
             <artifactId>kdgcommons</artifactId>
             <version>${kdgcommons.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>${slf4j.version}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>

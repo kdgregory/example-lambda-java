@@ -17,6 +17,7 @@ import javax.imageio.stream.ImageOutputStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import net.sf.kdgcommons.collections.CollectionUtil;
 
@@ -60,6 +61,9 @@ public class Resizer
 
     public void handler(Map<String,Object> message, Context lambdaContext)
     {
+        MDC.clear();
+        MDC.put("requestId", lambdaContext.getAwsRequestId());
+
         List<Map<String,Object>> records = (List<Map<String,Object>>)message.get("Records");
         logger.info("received {} messages", records.size());
 
