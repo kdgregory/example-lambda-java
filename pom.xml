@@ -28,7 +28,6 @@
 
         <!-- all dependency versions are specified here -->
         <aws-lambda-core.version>1.2.0</aws-lambda-core.version>
-        <aws-lambda-logger.version>1.0.0</aws-lambda-logger.version>
         <aws-sdk.version>1.11.600</aws-sdk.version>
         <jackson.version>2.8.5</jackson.version>
         <jose4j.version>0.6.5</jose4j.version>
@@ -44,6 +43,11 @@
 
     <!-- the only dependencies that go here are ones that are shared by EVERY module -->
     <dependencies>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
