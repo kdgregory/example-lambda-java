@@ -65,6 +65,12 @@ public class Resizer
         MDC.put("requestId", lambdaContext.getAwsRequestId());
 
         List<Map<String,Object>> records = (List<Map<String,Object>>)message.get("Records");
+        if (records == null)
+        {
+            logger.warn("bogus invocation: {}", message);
+            return;
+        }
+        
         logger.info("received {} messages", records.size());
 
         for (Map<String,Object> record : records)
