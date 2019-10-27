@@ -88,6 +88,6 @@ EOF
 
 aws cloudformation create-stack \
                    --stack-name ${BASENAME} \
-                   --template-body file://Scripts/deploy.cf \
+                   --template-body file://Scripts/cloudformation.yml \
                    --capabilities CAPABILITY_NAMED_IAM \
                    --parameters "$(< Scripts/cfparams.json)"

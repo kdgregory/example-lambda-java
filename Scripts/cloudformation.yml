@@ -1,0 +1,340 @@
+AWSTemplateFormatVersion:               "2010-09-09"
+Description:                            "Sample Lambda web application programmed in Java"
+
+Parameters:
+
+  BaseName:
+    Description:                        "Base name for all objects created by this template"
+    Type:                               "String"
+
+  Bucket:
+    Description:                        "Name of the bucket used by the application"
+    Type:                               "String"
+
+  WebappJar:
+    Description:                        "Bucket key for the WebApp deployment JAR"
+    Type:                               "String"
+
+  ResizerJar:
+    Description:                        "Bucket key for the Resizer deployment JAR"
+    Type:                               "String"
+
+Resources:
+
+  ##
+  ## Ungrouped Resources
+  ##
+
+  CognitoUserPool:
+    Type:                               "AWS::Cognito::UserPool"
+    Properties:
+      UserPoolName:                     !Sub "${BaseName}-UserPool"
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly:       true
+        UnusedAccountValidityDays:      7
+      MfaConfiguration:                 "OFF"
+      Policies:
+        PasswordPolicy:
+          MinimumLength:                8
+          RequireUppercase:             true
+          RequireLowercase:             true
+          RequireNumbers:               true
+          RequireSymbols:               false
+      Schema:
+        -
+          Name:                         "email"
+          Required:                     true
+          Mutable:                      true
+          DeveloperOnlyAttribute:       false
+          AttributeDataType:            "String"
+          StringAttributeConstraints:
+            MinLength:                  0
+            MaxLength:                  2048
+        -
+          Name:                         "email_verified"
+          Required:                     false
+          Mutable:                      true
+          DeveloperOnlyAttribute:       false
+          AttributeDataType:            "Boolean"
+
+  CognitoUserPoolClient:
+    Type:                               "AWS::Cognito::UserPoolClient"
+    Properties:
+      UserPoolId:                       !Ref CognitoUserPool
+      ClientName:                       "default"
+      ExplicitAuthFlows:                [ "ADMIN_NO_SRP_AUTH" ]
+      GenerateSecret:                   false
+      RefreshTokenValidity:             7
+
+  DynamoMetadataTable:
+    Type:                               "AWS::DynamoDB::Table"
+    Properties:
+      TableName:                        !Sub "${BaseName}-Metadata"
+      AttributeDefinitions:
+        -
+          AttributeName:                "username"
+          AttributeType:                "S"
+        -
+          AttributeName:                "id"
+          AttributeType:                "S"
+      KeySchema:
+        -
+          AttributeName:                "username"
+          KeyType:                      "HASH"
+        -
+          AttributeName:                "id"
+          KeyType:                      "RANGE"
+      ProvisionedThroughput:
+        ReadCapacityUnits:              10
+        WriteCapacityUnits:             5
+
+  ##
+  ## Resizer
+  ##
+
+  ResizerLogGroup:
+    Type:                               "AWS::Logs::LogGroup"
+    DeletionPolicy:                     "Delete"
+    Properties:
+      LogGroupName:                     !Sub "/aws/lambda/${BaseName}-Resizer"
+      RetentionInDays:                  7
+
+  ResizerExecutionRole:
+    Type:                               "AWS::IAM::Role"
+    DependsOn:                          [ DynamoMetadataTable, ResizerLogGroup ]
+    Properties:
+      RoleName:                         !Sub "${BaseName}-ResizerExecutionRole"
+      AssumeRolePolicyDocument:
+        Version:                        "2012-10-17"
+        Statement:
+          Effect:                       "Allow"
+          Action:                       "sts:AssumeRole"
+          Principal:
+            Service:                    "lambda.amazonaws.com"
+      Policies:
+        -
+          PolicyName:                   !Sub "${BaseName}-ResizerCloudwatchPolicy"
+          PolicyDocument:
+            Version:                    "2012-10-17"
+            Statement:
+              -
+                Effect:                 "Allow"
+                Action:
+                  -                     "logs:CreateLogGroup"
+                Resource:               !Sub "arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/lambda/${BaseName}-Resizer"
+              -
+                Effect:                 "Allow"
+                Action:
+                  -                     "logs:CreateLogStream"
+                  -                     "logs:PutLogEvents"
+                Resource:               !Sub "arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/lambda/${BaseName}-Resizer:*"
+        -
+          PolicyName:                   !Sub "${BaseName}-ResizerDynamoPolicy"
+          PolicyDocument:
+            Version:                    "2012-10-17"
+            Statement:
+              Effect:                   "Allow"
+              Action:
+                -                       "dynamodb:GetItem"
+                -                       "dynamodb:PutItem"
+                -                       "dynamodb:Query"
+              Resource:                 !GetAtt DynamoMetadataTable.Arn
+        -
+          PolicyName:                   !Sub "${BaseName}-ResizerBucketPolicy"
+          PolicyDocument:
+            Version:                    "2012-10-17"
+            Statement:
+              Effect:                   "Allow"
+              Action:
+                -                       "s3:Get*"
+                -                       "s3:Put*"
+              Resource:                 !Sub "arn:aws:s3:::${Bucket}/images/*"
+
+  ResizerLambdaFunction:
+    Type:                               "AWS::Lambda::Function"
+    DependsOn:                          [ ResizerExecutionRole ]
+    Properties:
+      Description:                      "Implements the resizer portion of the example"
+      Runtime:                          "java8"
+      FunctionName:                     !Sub "${BaseName}-Resizer"
+      Code:
+        S3Bucket:                       !Ref Bucket
+        S3Key:                          !Ref ResizerJar
+
+      Role:                             !GetAtt ResizerExecutionRole.Arn
+      Handler:                          "com.kdgregory.example.javalambda.resizer.Resizer::handler"
+      MemorySize:                       256
+      Timeout:                          30
+      Environment:
+        Variables:
+          DYNAMO_TABLE:                 !Ref DynamoMetadataTable
+          S3_IMAGE_BUCKET:              !Ref Bucket
+          S3_IMAGE_PREFIX:              "images"
+
+  ResizeNotificationTopic:
+    Type:                               "AWS::SNS::Topic"
+    Properties:
+      TopicName:                        !Sub "${BaseName}-Notifications"
+      DisplayName:                      !Sub "Used by the ${BaseName} example to notify the resizer of new images"
+
+  ResizerSubscription:
+    Type:                               "AWS::SNS::Subscription"
+    DependsOn:                          [ ResizerLambdaFunction, ResizeNotificationTopic ]
+    Properties:
+      Protocol:                         "lambda"
+      Endpoint:                         !GetAtt ResizerLambdaFunction.Arn
+      TopicArn:                         !Ref ResizeNotificationTopic
+
+  ResizerInvocationPermission:
+    Type:                               "AWS::Lambda::Permission"
+    Properties:
+      Action:                           "lambda:InvokeFunction"
+      FunctionName:                     !GetAtt ResizerLambdaFunction.Arn
+      Principal:                        "sns.amazonaws.com"
+      SourceArn:                        !Ref ResizeNotificationTopic
+
+  ##
+  ## WebApp
+  ##
+
+  WebappLogGroup:
+    Type:                               "AWS::Logs::LogGroup"
+    DeletionPolicy:                     "Delete"
+    Properties:
+      LogGroupName:                     !Sub "/aws/lambda/${BaseName}-Webapp"
+      RetentionInDays:                  7
+
+  WebappExecutionRole:
+    Type:                               "AWS::IAM::Role"
+    DependsOn:                          [ CognitoUserPool, DynamoMetadataTable, ResizeNotificationTopic, WebappLogGroup ]
+    Properties:
+      RoleName:                         !Sub "${BaseName}-WebappExecutionRole"
+      AssumeRolePolicyDocument:
+        Version:                        "2012-10-17"
+        Statement:
+          Effect:                       "Allow"
+          Action:                       "sts:AssumeRole"
+          Principal:
+            Service:                    "lambda.amazonaws.com"
+      Policies:
+        -
+          PolicyName:                   !Sub "${BaseName}-WebappCloudwatchPolicy"
+          PolicyDocument:
+            Version:                    "2012-10-17"
+            Statement:
+              -
+                Effect:                 "Allow"
+                Action:
+                  -                     "logs:CreateLogGroup"
+                Resource:               !Sub "arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/lambda/${BaseName}-Webapp"
+              -
+                Effect:                 "Allow"
+                Action:
+                  -                     "logs:CreateLogStream"
+                  -                     "logs:PutLogEvents"
+                Resource:               !Sub "arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/lambda/${BaseName}-Webapp:*"
+        -
+          PolicyName:                   !Sub "${BaseName}-WebappCognitoPolicy"
+          PolicyDocument:
+            Version:                    "2012-10-17"
+            Statement:
+              -
+                Effect:                 "Allow"
+                Action:
+                  -                     "cognito-idp:*"
+                Resource:               !GetAtt CognitoUserPool.Arn
+        -
+          PolicyName:                   !Sub "${BaseName}-WebappDynamoPolicy"
+          PolicyDocument:
+            Version:                    "2012-10-17"
+            Statement:
+              -
+                Effect:                 "Allow"
+                Action:
+                  -                     "dynamodb:GetItem"
+                  -                     "dynamodb:PutItem"
+                  -                     "dynamodb:Query"
+                Resource:               !GetAtt DynamoMetadataTable.Arn
+        -
+          PolicyName:                   !Sub "${BaseName}-WebappSNSPolicy"
+          PolicyDocument:
+            Version:                    "2012-10-17"
+            Statement:
+              -
+                Effect:                 "Allow"
+                Action:                 "sns:Publish"
+                Resource:               !Ref ResizeNotificationTopic
+        -
+          PolicyName:                   !Sub "${BaseName}-WebappBucketPolicy"
+          PolicyDocument:
+            Version:                    "2012-10-17"
+            Statement:
+              -
+                Effect:                 "Allow"
+                Action:                 "s3:List*"
+                Resource:               !Sub "arn:aws:s3:::${Bucket}"
+              -
+                Effect:                 "Allow"
+                Action:                 
+                  -                     "s3:Get*"
+                  -                     "s3:Put*"
+                Resource:               !Sub "arn:aws:s3:::${Bucket}/images/*"
+
+  WebappLambdaFunction:
+    Type:                               "AWS::Lambda::Function"
+    DependsOn:                          [ WebappExecutionRole ]
+    Properties:
+      Description:                      "Implements the web-app portion of the example"
+      Runtime:                          "java8"
+      FunctionName:                     !Sub "${BaseName}-Webapp"
+      Code:
+        S3Bucket:                       !Ref Bucket
+        S3Key:                          !Ref WebappJar
+
+      Role:                             !GetAtt WebappExecutionRole.Arn
+      Handler:                          "com.kdgregory.example.javalambda.webapp.Dispatcher::handler"
+      MemorySize:                       256
+      Timeout:                          30
+      Environment:
+        Variables:
+          COGNITO_POOL_ID:              !Ref CognitoUserPool
+          COGNITO_CLIENT_ID:            !Ref CognitoUserPoolClient
+          DYNAMO_TABLE:                 !Ref DynamoMetadataTable
+          SNS_TOPIC_ARN:                !Ref ResizeNotificationTopic
+          S3_IMAGE_BUCKET:              !Ref Bucket
+          S3_IMAGE_PREFIX:              "images"
+
+
+Outputs:
+
+  CognitoUserPoolOutput:
+    Description:                      "Cognito pool for application users"
+    Value:                            !Ref CognitoUserPool
+
+  CognitoUserPoolClientOutput:
+    Description:                      "Cognito client for application users"
+    Value:                            !Ref CognitoUserPoolClient
+
+  DynamoMetadataTableOutput:
+    Description:                      "DynamoDB table holding photo metadata"
+    Value:                            !Ref DynamoMetadataTable
+
+  ResizeNotificationTopicOutput:
+    Description:                      "SNS topic used to notify the resizer of new images"
+    Value:                            !Ref ResizeNotificationTopic
+
+  WebappLambdaFunctionOutput:
+    Description:                      "Lambda function implementing the web-app"
+    Value:                            !Ref WebappLambdaFunction
+
+  WebappLogGroupOutput:
+    Description:                      "CloudWatch log group for the web-app lambda function"
+    Value:                            !Ref WebappLogGroup
+
+  ResizerLambdaFunctionOutput:
+    Description:                      "Lambda function implementing the resizer"
+    Value:                            !Ref ResizerLambdaFunction
+
+  ResizerLogGroupOutput:
+    Description:                      "CloudWatch log group for the resizer lambda function"
+    Value:                            !Ref ResizerLogGroup
