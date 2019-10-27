@@ -40,6 +40,11 @@
             <version>${aws-sdk.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.kdgregory.logging</groupId>
+            <artifactId>log4j1-aws-appenders</artifactId>
+            <version>${com-kdgregory-logging.version}</version>
+        </dependency>
+        <dependency>
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
             <version>${log4j.version}</version>
