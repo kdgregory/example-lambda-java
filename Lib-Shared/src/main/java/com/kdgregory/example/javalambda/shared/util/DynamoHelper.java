@@ -1,5 +1,5 @@
 // Copyright (c) Keith D Gregory, all rights reserved
-package com.kdgregory.example.javalambda.photomanager.util;
+package com.kdgregory.example.javalambda.shared.util;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -11,8 +11,6 @@ import java.util.stream.Collectors;
 import net.sf.kdgcommons.lang.StringUtil;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-
-import com.kdgregory.example.javalambda.photomanager.tabledef.PhotoKey;
 
 
 /**
@@ -128,15 +126,15 @@ public class DynamoHelper
      *  Produces an expression string that can be used for a Dynamo query using the
      *  passed key. Use in conjunction with (@link #queryMap}.
      */
-    public static String queryExpression(PhotoKey key)
+    public static String queryExpression(String userId, String photoId)
     {
         StringBuilder sb = new StringBuilder(256);
-        if (! StringUtil.isBlank(key.getUserId()))
+        if (! StringUtil.isBlank(userId))
         {
             sb.append("username = ").append(KEY_USERNAME);
         }
 
-        if (! StringUtil.isBlank(key.getPhotoId()))
+        if (! StringUtil.isBlank(photoId))
         {
             if (sb.length() > 0)
             {
@@ -153,11 +151,11 @@ public class DynamoHelper
      *  Produces a map of expression values corresponding to the passed key. Use
      *  in conjunction with {@link #queryExpression}.
      */
-    public static Map<String,AttributeValue> queryValues(PhotoKey key)
+    public static Map<String,AttributeValue> queryValues(String userId, String photoId)
     {
         Map<String,AttributeValue> result = new HashMap<>();
-        put(result, KEY_USERNAME, key.getUserId());
-        put(result, KEY_PHOTO_ID, key.getPhotoId());
+        put(result, KEY_USERNAME, userId);
+        put(result, KEY_PHOTO_ID, photoId);
         return result;
     }
 }

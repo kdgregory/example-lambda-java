@@ -21,13 +21,14 @@ import org.slf4j.LoggerFactory;
 import net.sf.kdgcommons.collections.CollectionUtil;
 
 import com.amazonaws.services.lambda.runtime.Context;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.kdgregory.example.javalambda.config.Environment;
-import com.kdgregory.example.javalambda.photomanager.ContentService;
-import com.kdgregory.example.javalambda.photomanager.MetadataService;
-import com.kdgregory.example.javalambda.photomanager.tabledef.PhotoKey;
-import com.kdgregory.example.javalambda.photomanager.tabledef.PhotoMetadata;
-import com.kdgregory.example.javalambda.photomanager.tabledef.Sizes;
+import com.kdgregory.example.javalambda.shared.config.Environment;
+import com.kdgregory.example.javalambda.shared.messages.NewPhoto;
+import com.kdgregory.example.javalambda.shared.services.content.ContentService;
+import com.kdgregory.example.javalambda.shared.services.metadata.MetadataService;
+import com.kdgregory.example.javalambda.shared.services.metadata.PhotoMetadata;
+import com.kdgregory.example.javalambda.shared.services.metadata.Sizes;
 
 
 /**
@@ -38,11 +39,13 @@ public class Resizer
 {
     private Logger logger = LoggerFactory.getLogger(getClass());
 
+    private ObjectMapper objectMapper;
     private MetadataService metadataService;
     private ContentService contentService;
 
     public Resizer()
     {
+        objectMapper = new ObjectMapper();
         metadataService = new MetadataService(
                             Environment.getOrThrow(Environment.DYNAMO_TABLE));
         contentService = new ContentService(
@@ -58,18 +61,19 @@ public class Resizer
     public void handler(Map<String,Object> message, Context lambdaContext)
     {
         List<Map<String,Object>> records = (List<Map<String,Object>>)message.get("Records");
+        logger.info("received {} messages", records.size());
+
         for (Map<String,Object> record : records)
         {
-            String identifier = (String)CollectionUtil.getVia(record, "Sns", "Message");
-            PhotoKey photoKey = new PhotoKey(identifier);
-            if (photoKey.isValid())
+            String content = (String)CollectionUtil.getVia(record, "Sns", "Message");
+            try
             {
-                logger.debug("processing: " + identifier);
-                process(photoKey);
+                NewPhoto photo = objectMapper.readValue(content, NewPhoto.class);
+                process(photo.getUserId(), photo.getPhotoId());
             }
-            else
+            catch (Exception ex)
             {
-                logger.warn("invalid key: " + identifier);
+                logger.error("failed to process message; content = {}", content, ex);
             }
         }
     }
@@ -79,19 +83,22 @@ public class Resizer
 //  Internals
 //----------------------------------------------------------------------------
 
-    private void process(PhotoKey photoKey)
+    private void process(String userId, String photoId)
     {
-        PhotoMetadata metadata = CollectionUtil.first(metadataService.retrieve(photoKey));
+        logger.info("processing: user {} photo {}", userId, photoId);
+        PhotoMetadata metadata = CollectionUtil.first(metadataService.retrieve(userId, photoId));
         if (metadata == null)
+        {
+            logger.warn("no metadata for photo {}; skipping resize", photoId);
             return;
+        }
 
-        byte[] content = contentService.download(photoKey.getPhotoId(), Sizes.ORIGINAL);
-        if (content == null)
-            return;
-
-        BufferedImage img = loadImage(content);
+        BufferedImage img = loadImage(photoId);
         if (img == null)
+        {
+            logger.warn("no content for photo {}; skipping resize", photoId);
             return;
+        }
 
         for (Sizes size : Sizes.values())
         {
@@ -109,18 +116,22 @@ public class Resizer
      *  Loads the content bytes into a buffered image and returns it, null if unable to
      *  load the image.
      */
-    private BufferedImage loadImage(byte[] content)
+    private BufferedImage loadImage(String photoId)
     {
+        byte[] content = contentService.download(photoId, Sizes.ORIGINAL);
+        if (content == null)
+            return null;
+
         try
         {
             BufferedImage img = ImageIO.read(new ByteArrayInputStream(content));
-            logger.debug("downloaded original file size = {}, width = {}, height = {}",
+            logger.debug("original file size = {}, width = {}, height = {}",
                          content.length, img.getWidth(), img.getHeight());
             return img;
         }
         catch (Exception ex)
         {
-            logger.warn("unable to load image", ex);
+            // this will be logged by caller
             return null;
         }
     }
@@ -138,7 +149,7 @@ public class Resizer
             double scaleFactor = 1.0 * size.getWidth() / img.getWidth();
             int dstWidth = size.getWidth();
             int dstHeight = (int)(img.getHeight() * scaleFactor);
-            
+
             logger.debug("resizing to fit {}; actual dimensions are {} x {}", size.getDescription(), dstWidth, dstHeight);
 
             BufferedImage dst = new BufferedImage(dstWidth, dstHeight, img.getType());

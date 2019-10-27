@@ -1,5 +1,5 @@
 // Copyright (c) Keith D Gregory, all rights reserved
-package com.kdgregory.example.javalambda.config;
+package com.kdgregory.example.javalambda.shared.config;
 
 import net.sf.kdgcommons.lang.StringUtil;
 

@@ -55,12 +55,8 @@ it's all wrapped up in a shell script:
   to be globally unique in the S3 world; I recommend an inverse-hostname approach similar
   to Java packages (eg: `com-example-lambda` -- although that's probably already in use).
 
-To run this script you also need to define environment variables with your access key and
-region:
-
-* `AWS_ACCESS_KEY`
-* `AWS_SECRET_KEY`
-* `AWS_REGION`
+To run this script you will need to have your default IAM profile configured, either via
+`aws configure` or environment variables.
 
 Assuming that all runs, you'll see a bunch of messages as the script generates and copies
 the deployment scripts, and it should end with a CloudFormation message like the following:
@@ -90,7 +86,7 @@ it if you can, delete the failed stack, and retry.
 
 Curl is your new best friend:
 
-    curl -v -c /tmp/cookies.dat -H 'Content-Type: application/json' -d '{"email": "example@mailinator.com", "password": "MyCoolPassword123"}' https://ENDPOINT.execute-api.us-east-1.amazonaws.com/test/api/signin
+    curl -v -c /tmp/cookies.dat -H 'Content-Type: application/json' -d '{"email": "example@mailinator.com", "password": "MyCoolPassword123"}' https://ENDPOINT/test/api/signin
 
 You'll need to replace `ENDPOINT` with the actual DNS name of the endpoint, but the rest of the
 request doesn't matter: in a new deployment you won't have any users. If everything's working,

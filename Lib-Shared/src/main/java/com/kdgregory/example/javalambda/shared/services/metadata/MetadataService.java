@@ -1,5 +1,5 @@
 // Copyright (c) Keith D Gregory, all rights reserved
-package com.kdgregory.example.javalambda.photomanager;
+package com.kdgregory.example.javalambda.shared.services.metadata;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,9 +12,7 @@ import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.model.*;
 
-import com.kdgregory.example.javalambda.photomanager.tabledef.PhotoKey;
-import com.kdgregory.example.javalambda.photomanager.tabledef.PhotoMetadata;
-import com.kdgregory.example.javalambda.photomanager.util.DynamoHelper;
+import com.kdgregory.example.javalambda.shared.util.DynamoHelper;
 
 
 /**
@@ -43,16 +41,16 @@ public class MetadataService
      *  Retrieves the list of photos matching the supplied key. May be none,
      *  one, or many (if the key only specifies user).
      */
-    public List<PhotoMetadata> retrieve(PhotoKey key)
+    public List<PhotoMetadata> retrieve(String userId, String photoId)
     {
-        logger.debug("retrieving metadata for user {} / id {}", key.getUserId(), key.getPhotoId());
+        logger.debug("retrieving metadata for user {}, photo {}", userId, photoId);
 
         List<PhotoMetadata> result = new ArrayList<PhotoMetadata>();
 
         QueryRequest request = new QueryRequest()
                                .withTableName(ddbTableName)
-                               .withKeyConditionExpression(DynamoHelper.queryExpression(key))
-                               .withExpressionAttributeValues(DynamoHelper.queryValues(key));
+                               .withKeyConditionExpression(DynamoHelper.queryExpression(userId, photoId))
+                               .withExpressionAttributeValues(DynamoHelper.queryValues(userId, photoId));
 
         boolean more = false;
         do
@@ -61,7 +59,14 @@ public class MetadataService
             logger.debug("retrieved {} items in batch", response.getCount());
             for (Map<String,AttributeValue> item : response.getItems())
             {
-                result.add(PhotoMetadata.fromDynamoMap(item));
+                try
+                {
+                    result.add(PhotoMetadata.fromDynamoMap(item));
+                }
+                catch (Exception ex)
+                {
+                    logger.error("invalid metadata in Dynamo: {}", item);
+                }
             }
 
             // the documentation says this will be empty if there are no more records to retrieve,
@@ -71,7 +76,7 @@ public class MetadataService
             request.setExclusiveStartKey(lastEvaluatedKey);
         } while (more);
 
-        logger.debug("retrieved {} items total", result.size());
+        logger.debug("retrieved {} items for photo {}", result.size(), photoId);
         return result;
     }
 
@@ -83,13 +88,12 @@ public class MetadataService
      */
     public boolean store(PhotoMetadata metadata)
     {
+        logger.debug("storing metadata for user {}, photo {}", metadata.getUser(), metadata.getId());
         if (!metadata.isValid())
         {
-            logger.warn("upload called with invalid metadata: " + metadata);
+            logger.warn("upload called with invalid metadata: {}", metadata);
             return false;
         }
-
-        logger.debug("storing metadata for user {} / id {}", metadata.getUser(), metadata.getId());
         ddbClient.putItem(ddbTableName, metadata.toDynamoMap());
         return true;
     }

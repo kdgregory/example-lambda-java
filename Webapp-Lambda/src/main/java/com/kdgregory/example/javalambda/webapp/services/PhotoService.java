@@ -2,6 +2,7 @@
 package com.kdgregory.example.javalambda.webapp.services;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -10,22 +11,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.sf.kdgcommons.codec.Base64Codec;
-import net.sf.kdgcommons.collections.MapBuilder;
 import net.sf.kdgcommons.lang.StringUtil;
 
 import com.amazonaws.services.sns.AmazonSNS;
 import com.amazonaws.services.sns.AmazonSNSClientBuilder;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.kdgregory.example.javalambda.config.Environment;
-import com.kdgregory.example.javalambda.photomanager.ContentService;
-import com.kdgregory.example.javalambda.photomanager.MetadataService;
-import com.kdgregory.example.javalambda.photomanager.tabledef.Fields;
-import com.kdgregory.example.javalambda.photomanager.tabledef.PhotoKey;
-import com.kdgregory.example.javalambda.photomanager.tabledef.PhotoMetadata;
-import com.kdgregory.example.javalambda.photomanager.tabledef.Sizes;
-import com.kdgregory.example.javalambda.webapp.Request;
-import com.kdgregory.example.javalambda.webapp.Response;
-import com.kdgregory.example.javalambda.webapp.ResponseCodes;
+import com.kdgregory.example.javalambda.shared.config.Environment;
+import com.kdgregory.example.javalambda.shared.messages.NewPhoto;
+import com.kdgregory.example.javalambda.shared.services.content.ContentService;
+import com.kdgregory.example.javalambda.shared.services.metadata.Fields;
+import com.kdgregory.example.javalambda.shared.services.metadata.MetadataService;
+import com.kdgregory.example.javalambda.shared.services.metadata.PhotoMetadata;
+import com.kdgregory.example.javalambda.shared.services.metadata.Sizes;
+import com.kdgregory.example.javalambda.webapp.util.Request;
+import com.kdgregory.example.javalambda.webapp.util.Response;
+import com.kdgregory.example.javalambda.webapp.util.ResponseCodes;
 
 
 /**
@@ -54,6 +55,7 @@ public class PhotoService
     private Logger logger = LoggerFactory.getLogger(getClass());
 
     private AmazonSNS snsClient;
+    private ObjectMapper objectMapper;
     private String snsTopicArn;
     private MetadataService metadataService;
     private ContentService contentService;
@@ -62,6 +64,7 @@ public class PhotoService
     public PhotoService()
     {
         snsClient = AmazonSNSClientBuilder.defaultClient();
+        objectMapper = new ObjectMapper();
         snsTopicArn = Environment.getOrThrow(Environment.SNS_TOPIC_ARN);
         metadataService = new MetadataService(
                             Environment.getOrThrow(Environment.DYNAMO_TABLE));
@@ -81,10 +84,10 @@ public class PhotoService
     public Response listPhotos(Request request)
     {
         String userId = request.getUser();
-        logger.debug("listPhotos for user {}", userId);
+        logger.info("listPhotos: user {}", userId);
 
          List<Map<String,Object>> result = new ArrayList<Map<String,Object>>();
-         for (PhotoMetadata item : metadataService.retrieve(new PhotoKey(userId, null)))
+         for (PhotoMetadata item : metadataService.retrieve(userId, null))
          {
              result.add(item.toClientMap());
          }
@@ -98,29 +101,31 @@ public class PhotoService
      */
     public Response upload(Request request)
     {
-        String photoId = UUID.randomUUID().toString();
+        Map<String,Object> requestBody = request.getBody();
         String userId = request.getUser();
+        String filename = (String)requestBody.get(ParamNames.FILENAME);
+        String photoId = UUID.randomUUID().toString();
 
-        // we'll jam our data into the request body ... immutability be damned!
-        Map<String,Object> requestBody = new MapBuilder<String,Object>(request.getBody())
-                                         .put(Fields.ID, photoId)
-                                         .put(Fields.USERNAME, userId)
-                                         .put(Fields.UPLOADED_AT, Long.valueOf(System.currentTimeMillis()))
-                                         .toMap();
+        logger.info("upload: user {}, filename {}, photo {}", userId, filename, photoId);
 
-        logger.debug("upload of {} for user {}", requestBody.get(ParamNames.FILENAME), userId);
-
-        PhotoMetadata metadata = PhotoMetadata.fromClientMap(requestBody);
+        PhotoMetadata metadata = new PhotoMetadata(
+                                    photoId,
+                                    userId,
+                                    filename,
+                                    (String)requestBody.get(Fields.MIMETYPE),
+                                    (String)requestBody.get(Fields.DESCRIPTION),
+                                    Long.valueOf(System.currentTimeMillis()),
+                                    Arrays.asList(Sizes.ORIGINAL.name()));
         if (! metadata.isValid())
         {
-            logger.debug("missing metadata; provided keys: {}", requestBody.keySet());
+            logger.warn("missing metadata; provided keys: {}", requestBody.keySet());
             return new Response(ResponseCodes.INVALID_OPERATION);
         }
 
         String base64Content = (String)request.getBody().get(ParamNames.CONTENT);
         if (base64Content == null)
         {
-            logger.debug("missing content");
+            logger.warn("missing content");
             return new Response(ResponseCodes.INVALID_OPERATION);
         }
 
@@ -144,7 +149,18 @@ public class PhotoService
 
         metadataService.store(metadata);
         contentService.upload(metadata.getId(), metadata.getMimetype(), Sizes.ORIGINAL, content);
-        snsClient.publish(snsTopicArn, new PhotoKey(userId, photoId).toCombinedValue());
+
+        try
+        {
+            String uploadMessage = objectMapper.writeValueAsString(new NewPhoto(userId, photoId));
+            snsClient.publish(snsTopicArn, uploadMessage);
+        }
+        catch (Exception ex)
+        {
+            logger.error("unable to write message to SNS: user {}, filename {}, photo {}", userId, filename, photoId, ex);
+            // FIXME - this should just throw
+            return new Response(ResponseCodes.INTERNAL_ERROR);
+        }
 
         return new Response(ResponseCodes.SUCCESS);
     }

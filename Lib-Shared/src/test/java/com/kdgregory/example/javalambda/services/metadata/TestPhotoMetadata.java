@@ -1,5 +1,5 @@
 // Copyright (c) Keith D Gregory, all rights reserved
-package com.kdgregory.example.javalambda.photomanager.tabledef;
+package com.kdgregory.example.javalambda.services.metadata;
 
 import java.util.Collections;
 import java.util.EnumSet;
@@ -9,12 +9,15 @@ import java.util.Map;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 
-import com.kdgregory.example.javalambda.photomanager.tabledef.PhotoMetadata;
+import com.kdgregory.example.javalambda.shared.services.metadata.Fields;
+import com.kdgregory.example.javalambda.shared.services.metadata.PhotoMetadata;
+import com.kdgregory.example.javalambda.shared.services.metadata.Sizes;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
 
 import net.sf.kdgcommons.collections.CollectionUtil;
+import net.sf.kdgcommons.test.StringAsserts;
 
 
 public class TestPhotoMetadata
@@ -75,6 +78,30 @@ public class TestPhotoMetadata
         assertTrue("valid", meta.isValid());
 
         assertEquals("created map equals original", map, meta.toDynamoMap());
+    }
+
+
+    @Test
+    public void testInvalidDynamoMap() throws Exception
+    {
+        Map<String,AttributeValue> map = new HashMap<String,AttributeValue>();
+        map.put(Fields.ID,            new AttributeValue().withS("abcd"));
+        map.put(Fields.USERNAME,      new AttributeValue().withS("qwerty"));
+        map.put(Fields.FILENAME,      new AttributeValue().withS("test"));
+        map.put(Fields.MIMETYPE,      new AttributeValue().withS("image/jpeg"));
+        map.put(Fields.DESCRIPTION,   new AttributeValue().withS("this is a test"));
+        map.put(Fields.UPLOADED_AT,   new AttributeValue().withN("123"));
+        map.put(Fields.SIZES,         new AttributeValue().withSS("BOGUS"));
+
+        try
+        {
+            PhotoMetadata.fromDynamoMap(map);
+            fail("should have thrown due to bogus enum value");
+        }
+        catch (IllegalArgumentException ex)
+        {
+            StringAsserts.assertContainsRegex("No enum.*BOGUS", ex.getMessage());
+        }
     }
 
 

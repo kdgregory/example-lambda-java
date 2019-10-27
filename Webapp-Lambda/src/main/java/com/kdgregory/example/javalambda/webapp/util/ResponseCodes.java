@@ -1,5 +1,5 @@
 // Copyright (c) Keith D Gregory, all rights reserved
-package com.kdgregory.example.javalambda.webapp;
+package com.kdgregory.example.javalambda.webapp.util;
 
 /**
  *  All response codes and their descriptions. Note that codes may not
@@ -8,6 +8,7 @@ package com.kdgregory.example.javalambda.webapp;
 public enum ResponseCodes
 {
     SUCCESS                 (""),
+    INTERNAL_ERROR          ("An internal error occurred; this has been logged"),
     INVALID_OPERATION       ("Unsupported operation"),
     INVALID_REQUEST         ("The request is missing needed fields"),
     NOT_AUTHENTICATED       ("The user did not provide valid authentication tokens"),
