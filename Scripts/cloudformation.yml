@@ -113,7 +113,7 @@ Resources:
             Service:                    "lambda.amazonaws.com"
       Policies:
         -
-          PolicyName:                   !Sub "${BaseName}-ResizerCloudwatchPolicy"
+          PolicyName:                   !Sub "${BaseName}-ResizerCloudWatchPolicy"
           PolicyDocument:
             Version:                    "2012-10-17"
             Statement:
@@ -121,13 +121,13 @@ Resources:
                 Effect:                 "Allow"
                 Action:
                   -                     "logs:CreateLogGroup"
-                Resource:               !Sub "arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/lambda/${BaseName}-Resizer"
+                Resource:               "*"
               -
                 Effect:                 "Allow"
                 Action:
                   -                     "logs:CreateLogStream"
                   -                     "logs:PutLogEvents"
-                Resource:               !Sub "arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/lambda/${BaseName}-Resizer:*"
+                Resource:               !GetAtt ResizerLogGroup.Arn
         -
           PolicyName:                   !Sub "${BaseName}-ResizerDynamoPolicy"
           PolicyDocument:
@@ -218,7 +218,7 @@ Resources:
             Service:                    "lambda.amazonaws.com"
       Policies:
         -
-          PolicyName:                   !Sub "${BaseName}-WebappCloudwatchPolicy"
+          PolicyName:                   !Sub "${BaseName}-WebappCloudWatchPolicy"
           PolicyDocument:
             Version:                    "2012-10-17"
             Statement:
@@ -226,13 +226,13 @@ Resources:
                 Effect:                 "Allow"
                 Action:
                   -                     "logs:CreateLogGroup"
-                Resource:               !Sub "arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/lambda/${BaseName}-Webapp"
+                Resource:               "*"
               -
                 Effect:                 "Allow"
                 Action:
                   -                     "logs:CreateLogStream"
                   -                     "logs:PutLogEvents"
-                Resource:               !Sub "arn:aws:logs:*:${AWS::AccountId}:log-group:/aws/lambda/${BaseName}-Webapp:*"
+                Resource:               !GetAtt WebappLogGroup.Arn
         -
           PolicyName:                   !Sub "${BaseName}-WebappCognitoPolicy"
           PolicyDocument:
