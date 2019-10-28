@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -40,21 +42,22 @@ public class Dispatcher
     private ObjectMapper mapper = new ObjectMapper();
     private UserService userService = new UserService();
     private PhotoService photoService = new PhotoService();
+    
+    private Pattern actionRegex = Pattern.compile("/api/(.*)");
 
 
 //----------------------------------------------------------------------------
 //  Public methods
 //----------------------------------------------------------------------------
 
-    public Map<String,Object> handler(Map<String,Object> proxyRequest, Context lambdaContext)
+    public Map<String,Object> handler(Map<String,Object> albRequest, Context lambdaContext)
     {
         MDC.clear();
         MDC.put("requestId", lambdaContext.getAwsRequestId());
-
+        
         try
         {
-            // this is the only place we pull pieces out of the AWS request so forego constants
-            Request request = extractRequest(proxyRequest);
+            Request request = extractRequest(albRequest);
             Response response = dispatch(request);
             return buildResponseMap(response);
         }
@@ -86,16 +89,23 @@ public class Dispatcher
      *   @throws IllegalArgumentException if unable to process the strings;
      *           should be transformed to a 400 error.
      */
-    private Request extractRequest(Map<String,Object> proxyRequest)
+    private Request extractRequest(Map<String,Object> albRequest)
     {
         // I'm retrieving the raw data all at once, so that I don't sprinkle access
         // to the original request throughout the method; I'm using literals because
         // this is the only place that these values will appear
 
-        String method      = (String)CollectionUtil.getVia(proxyRequest, "httpMethod");
-        String action      = (String)CollectionUtil.getVia(proxyRequest, "pathParameters", "action");
-        String tokenHeader = (String)CollectionUtil.getVia(proxyRequest, "headers", "Cookie");
-        String body        = (String)CollectionUtil.getVia(proxyRequest, "body");
+        String method      = (String)CollectionUtil.getVia(albRequest, "httpMethod");
+        String path        = (String)CollectionUtil.getVia(albRequest, "path");
+        String tokenHeader = (String)CollectionUtil.getVia(albRequest, "headers", "Cookie");
+        String body        = (String)CollectionUtil.getVia(albRequest, "body");
+        
+        Matcher actionMatch = actionRegex.matcher(path);
+        if (! actionMatch.matches())
+        {
+            throw new IllegalArgumentException("invalid request path: " + path);
+        }
+        String action = actionMatch.group(1);
 
         // body will be empty on GET, but rather than have separate code paths I'll give a dummy value
         if (StringUtil.isEmpty(body))
