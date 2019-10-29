@@ -7,6 +7,14 @@ Parameters:
     Description:                        "Base name for all objects created by this template"
     Type:                               "String"
 
+  VpcId:
+    Description:                        "The VPC where the load balancer will be deployed"
+    Type:                               "AWS::EC2::VPC::Id"
+
+  PublicSubnetIds:
+    Description:                        "The list of public subnets where load balancer endpoints will live"
+    Type:                               "List<AWS::EC2::Subnet::Id>"
+
   Bucket:
     Description:                        "Name of the bucket used by the application"
     Type:                               "String"
@@ -194,7 +202,7 @@ Resources:
       SourceArn:                        !Ref ResizeNotificationTopic
 
   ##
-  ## WebApp
+  ## WebApp Lambda
   ##
 
   WebappLogGroup:
@@ -275,7 +283,7 @@ Resources:
                 Resource:               !Sub "arn:aws:s3:::${Bucket}"
               -
                 Effect:                 "Allow"
-                Action:                 
+                Action:
                   -                     "s3:Get*"
                   -                     "s3:Put*"
                 Resource:               !Sub "arn:aws:s3:::${Bucket}/images/*"
@@ -304,6 +312,63 @@ Resources:
           S3_IMAGE_BUCKET:              !Ref Bucket
           S3_IMAGE_PREFIX:              "images"
 
+  ##
+  ## Front-End
+  ##
+
+  LoadBalancerSecurityGroup:
+    Type:                               "AWS::EC2::SecurityGroup"
+    Properties: 
+      GroupName:                        !Sub "${BaseName}-SecurityGroup"
+      GroupDescription:                 !Sub "Provides Internet access to the ${BaseName} load balancer"
+      VpcId:                            !Ref VpcId
+      SecurityGroupIngress: 
+        -
+          Description:                  "HTTP access from Internet"
+          CidrIp:                       "0.0.0.0/0"
+          IpProtocol:                   "tcp"
+          FromPort:                     80
+          ToPort:                       80
+
+  LoadBalancer:
+    Type:                               "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    Properties: 
+      Name:                             !Sub "${BaseName}-API"
+      Type:                             "application"
+      Scheme:                           "internet-facing"
+      IpAddressType:                    "ipv4"
+      SecurityGroups:                   [ !Ref LoadBalancerSecurityGroup ]
+      Subnets:                          !Ref PublicSubnetIds
+
+  LoadBalancerHTTPListener:
+    Type:                               "AWS::ElasticLoadBalancingV2::Listener"
+    DependsOn:                          [ LoadBalancerTargetGroup ]
+    Properties: 
+      Protocol:                         "HTTP"
+      Port:                             80
+      LoadBalancerArn:                  !Ref LoadBalancer
+      DefaultActions: 
+        -
+          Type:                         "forward"
+          TargetGroupArn:               !Ref LoadBalancerTargetGroup
+
+  LoadBalancerTargetGroup:
+    Type:                               "AWS::ElasticLoadBalancingV2::TargetGroup"
+    DependsOn:                          [ LoadBalancerInvocationPermission ]
+    Properties: 
+      Name:                             !Sub "${BaseName}-LambdaTarget"
+      TargetType:                       "lambda"
+      HealthCheckEnabled:               false
+      Targets:
+        -
+          Id:                           !GetAtt WebappLambdaFunction.Arn
+
+  LoadBalancerInvocationPermission:
+    Type:                               "AWS::Lambda::Permission"
+    Properties: 
+      Action:                           "lambda:InvokeFunction"
+      FunctionName:                     !Ref WebappLambdaFunction
+      Principal:                        "elasticloadbalancing.amazonaws.com"
 
 Outputs:
 

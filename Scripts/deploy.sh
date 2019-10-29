@@ -3,7 +3,7 @@
 #
 # Deploys the demo app
 #
-#   Scripts/deploy.sh BASENAME BUCKETNAME
+#   Scripts/deploy.sh BASENAME BUCKETNAME VPC_ID PUBLIC_SUBNETS
 #
 # Will create the bucket if it does not already exist, copies all deployment artifacts into the
 # bucket, configures the swagger template with account-specific details, and creates the
@@ -17,6 +17,8 @@
 
 BASENAME=$1
 BUCKETNAME=$2
+VPC_ID=$3
+PUBLIC_SUBNETS=$4
 
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity | grep "Account" | sed -e 's/"//g' | sed -e 's/, *$//' | sed -e 's/.* //')
 
@@ -70,6 +72,14 @@ cat > Scripts/cfparams.json <<EOF
   {
     "ParameterKey":     "BaseName",
     "ParameterValue":   "${BASENAME}"
+  },
+  {
+    "ParameterKey":     "VpcId",
+    "ParameterValue":   "${VPC_ID}"
+  },
+  {
+    "ParameterKey":     "PublicSubnetIds",
+    "ParameterValue":   "${PUBLIC_SUBNETS}"
   },
   {
     "ParameterKey":     "Bucket",
