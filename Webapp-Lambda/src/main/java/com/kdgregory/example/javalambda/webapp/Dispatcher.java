@@ -55,6 +55,8 @@ public class Dispatcher
         MDC.clear();
         MDC.put("requestId", lambdaContext.getAwsRequestId());
         
+        logger.info("request: {}", albRequest);
+        
         try
         {
             Request request = extractRequest(albRequest);
@@ -97,7 +99,7 @@ public class Dispatcher
 
         String method      = (String)CollectionUtil.getVia(albRequest, "httpMethod");
         String path        = (String)CollectionUtil.getVia(albRequest, "path");
-        String tokenHeader = (String)CollectionUtil.getVia(albRequest, "headers", "Cookie");
+        String tokenHeader = (String)CollectionUtil.getVia(albRequest, "headers", "cookie");
         String body        = (String)CollectionUtil.getVia(albRequest, "body");
         
         Matcher actionMatch = actionRegex.matcher(path);
@@ -194,12 +196,13 @@ public class Dispatcher
      */
     private Map<String,Object> buildResponseMap(Response response)
     {
+        Map<String,Object> responseMap = new HashMap<>();
+        responseMap.put("statusCode", response.getStatusCode());
+        
         Map<String,String> headers = response.getTokens().createCookieHeaders();
         headers.put("Content-Type", "application/json");
-
-        Map<String,Object> responseMap = new HashMap<>();
+        headers.put("Cache-Control", "no-cache");
         responseMap.put("headers", headers);
-        responseMap.put("statusCode", response.getStatusCode());
 
         // default to an empty body
         responseMap.put("body", null);
@@ -215,6 +218,7 @@ public class Dispatcher
                 responseMap.put("statusCode", 500);
             }
         }
+        responseMap.put("isBase64Encoded", Boolean.FALSE);
 
         return responseMap;
     }
