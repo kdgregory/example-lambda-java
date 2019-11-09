@@ -19,6 +19,11 @@ Parameters:
     Description:                        "Name of the bucket used by the application"
     Type:                               "String"
 
+  LogsPrefix:
+    Description:                        "Prefix for load-balancer logs within the application bucket"
+    Type:                               "String"
+    Default:                            "lb-logs"
+
   WebappJar:
     Description:                        "Bucket key for the WebApp deployment JAR"
     Type:                               "String"
@@ -339,6 +344,10 @@ Resources:
       IpAddressType:                    "ipv4"
       SecurityGroups:                   [ !Ref LoadBalancerSecurityGroup ]
       Subnets:                          !Ref PublicSubnetIds
+      LoadBalancerAttributes:
+        -                               { 'Key': 'access_logs.s3.enabled',  'Value': true }
+        -                               { 'Key': 'access_logs.s3.bucket',   'Value': !Ref Bucket }
+        -                               { 'Key': 'access_logs.s3.prefix',   'Value': !Ref LogsPrefix }
 
   LoadBalancerHTTPListener:
     Type:                               "AWS::ElasticLoadBalancingV2::Listener"
@@ -348,6 +357,24 @@ Resources:
       Port:                             80
       LoadBalancerArn:                  !Ref LoadBalancer
       DefaultActions: 
+        -
+          Type:                         "fixed-response"
+          FixedResponseConfig:
+            StatusCode:                 404
+            ContentType:                "text/plain"
+            MessageBody:                "invalid destination"
+
+  LoadBalancerAPIDispatchRule:
+    Type:                               "AWS::ElasticLoadBalancingV2::ListenerRule"
+    Properties: 
+      ListenerArn:                      !Ref LoadBalancerHTTPListener
+      Priority:                         10
+      Conditions: 
+        -
+          Field:                        "path-pattern"
+          Values:
+            -                           "/api/*"
+      Actions: 
         -
           Type:                         "forward"
           TargetGroupArn:               !Ref LoadBalancerTargetGroup
@@ -369,6 +396,119 @@ Resources:
       Action:                           "lambda:InvokeFunction"
       FunctionName:                     !Ref WebappLambdaFunction
       Principal:                        "elasticloadbalancing.amazonaws.com"
+
+  CloudFrontOriginIdentity:
+    Type:                               "AWS::CloudFront::CloudFrontOriginAccessIdentity"
+    Properties: 
+      CloudFrontOriginAccessIdentityConfig: 
+        Comment:                        !Sub "Origin identity for ${BaseName} deployment"
+
+  CloudFront:
+    Type:                               "AWS::CloudFront::Distribution"
+    Properties: 
+      DistributionConfig: 
+        Comment:                        !Sub "${BaseName} deployment"
+        Enabled:                        true
+        DefaultRootObject:              "index.html"
+        Origins: 
+          -
+            Id:                         "StaticContent"
+            DomainName:                 !Sub "${Bucket}.s3.amazonaws.com"
+            OriginPath:                 "/static"
+            S3OriginConfig:
+              OriginAccessIdentity:     !Sub "origin-access-identity/cloudfront/${CloudFrontOriginIdentity}"
+          -
+            Id:                         "Images"
+            DomainName:                 !Sub "${Bucket}.s3.amazonaws.com"
+            S3OriginConfig:
+              OriginAccessIdentity:     !Sub "origin-access-identity/cloudfront/${CloudFrontOriginIdentity}"
+          -
+            Id:                         "API"
+            DomainName:                 !GetAtt LoadBalancer.DNSName
+            CustomOriginConfig: 
+              HTTPPort:                 80
+              OriginProtocolPolicy:     "http-only"
+          -
+            Id:                         "BlackHole"
+            DomainName:                 !GetAtt LoadBalancer.DNSName
+            OriginPath:                 "/blackhole"        # this path won't match accidentally
+            CustomOriginConfig: 
+              HTTPPort:                 80
+              OriginProtocolPolicy:     "http-only"
+        CacheBehaviors: 
+          -
+            PathPattern:                "/api/*"
+            ViewerProtocolPolicy:       "redirect-to-https"
+            TargetOriginId:             "API"
+            AllowedMethods:             [ "GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE" ]
+            CachedMethods:              [ "GET", "HEAD" ]   # would be nice to have "none"
+            ForwardedValues: 
+              Cookies: 
+                Forward:                "all"
+              QueryString:              true
+            Compress:                   false               # wouldn't buy much
+            DefaultTTL:                 0                   # in case we don't have cache-control headers
+          -
+            PathPattern:                "/images/*"
+            ViewerProtocolPolicy:       "redirect-to-https"
+            TargetOriginId:             "Images"
+            AllowedMethods:             [ "GET", "HEAD" ]
+            CachedMethods:              [ "GET", "HEAD" ]
+            ForwardedValues: 
+              QueryString:              false
+            Compress:                   false
+            DefaultTTL:                 86400
+          -
+            PathPattern:                "index.html"
+            ViewerProtocolPolicy:       "redirect-to-https"
+            TargetOriginId:             "StaticContent"
+            AllowedMethods:             [ "GET", "HEAD" ]
+            CachedMethods:              [ "GET", "HEAD" ]
+            ForwardedValues: 
+              QueryString:              false
+            Compress:                   true
+            DefaultTTL:                 86400
+          -
+            PathPattern:                "/templates/*"
+            ViewerProtocolPolicy:       "redirect-to-https"
+            TargetOriginId:             "StaticContent"
+            AllowedMethods:             [ "GET", "HEAD" ]
+            CachedMethods:              [ "GET", "HEAD" ]
+            ForwardedValues: 
+              QueryString:              false
+            Compress:                   true
+            DefaultTTL:                 86400
+          -
+            PathPattern:                "/css/*"
+            ViewerProtocolPolicy:       "redirect-to-https"
+            TargetOriginId:             "StaticContent"
+            AllowedMethods:             [ "GET", "HEAD" ]
+            CachedMethods:              [ "GET", "HEAD" ]
+            ForwardedValues: 
+              QueryString:              false
+            Compress:                   true
+            DefaultTTL:                 86400
+          -
+            PathPattern:                "/js/*"
+            ViewerProtocolPolicy:       "redirect-to-https"
+            TargetOriginId:             "StaticContent"
+            AllowedMethods:             [ "GET", "HEAD" ]
+            CachedMethods:              [ "GET", "HEAD" ]
+            ForwardedValues: 
+              QueryString:              false
+            Compress:                   true
+            DefaultTTL:                 86400
+        DefaultCacheBehavior:
+            ViewerProtocolPolicy:       "redirect-to-https"
+            TargetOriginId:             "BlackHole"
+            AllowedMethods:             [ "GET", "HEAD" ]
+            CachedMethods:              [ "GET", "HEAD" ]
+            ForwardedValues: 
+              QueryString:              false
+            Compress:                   false
+            DefaultTTL:                 86400
+            ForwardedValues: 
+              QueryString:              false
 
 Outputs:
 
