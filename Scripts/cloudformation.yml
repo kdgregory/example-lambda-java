@@ -15,14 +15,9 @@ Parameters:
     Description:                        "The list of public subnets where load balancer endpoints will live"
     Type:                               "List<AWS::EC2::Subnet::Id>"
 
-  Bucket:
-    Description:                        "Name of the bucket used by the application"
+  DeploymentBucketName:
+    Description:                        "Name of the bucket where the Lambda deployment bundles live"
     Type:                               "String"
-
-  LogsPrefix:
-    Description:                        "Prefix for load-balancer logs within the application bucket"
-    Type:                               "String"
-    Default:                            "lb-logs"
 
   WebappJar:
     Description:                        "Bucket key for the WebApp deployment JAR"
@@ -30,6 +25,18 @@ Parameters:
 
   ResizerJar:
     Description:                        "Bucket key for the Resizer deployment JAR"
+    Type:                               "String"
+
+  StaticBucketName:
+    Description:                        "Name of the bucket where static content lives"
+    Type:                               "String"
+
+  ImageBucketName:
+    Description:                        "Name of the bucket where image content lives"
+    Type:                               "String"
+
+  LogsBucketName:
+    Description:                        "Name of the bucket where the load balancer will write its logs"
     Type:                               "String"
 
 Resources:
@@ -161,7 +168,7 @@ Resources:
               Action:
                 -                       "s3:Get*"
                 -                       "s3:Put*"
-              Resource:                 !Sub "arn:aws:s3:::${Bucket}/images/*"
+              Resource:                 !Sub "arn:aws:s3:::${ImageBucketName}/*"
 
   ResizerLambdaFunction:
     Type:                               "AWS::Lambda::Function"
@@ -171,7 +178,7 @@ Resources:
       Runtime:                          "java8"
       FunctionName:                     !Sub "${BaseName}-Resizer"
       Code:
-        S3Bucket:                       !Ref Bucket
+        S3Bucket:                       !Ref DeploymentBucketName
         S3Key:                          !Ref ResizerJar
 
       Role:                             !GetAtt ResizerExecutionRole.Arn
@@ -181,7 +188,7 @@ Resources:
       Environment:
         Variables:
           DYNAMO_TABLE:                 !Ref DynamoMetadataTable
-          S3_IMAGE_BUCKET:              !Ref Bucket
+          S3_IMAGE_BUCKET:              !Ref ImageBucketName
           S3_IMAGE_PREFIX:              "images"
 
   ResizeNotificationTopic:
@@ -285,13 +292,13 @@ Resources:
               -
                 Effect:                 "Allow"
                 Action:                 "s3:List*"
-                Resource:               !Sub "arn:aws:s3:::${Bucket}"
+                Resource:               !Sub "arn:aws:s3:::${ImageBucketName}"
               -
                 Effect:                 "Allow"
                 Action:
                   -                     "s3:Get*"
                   -                     "s3:Put*"
-                Resource:               !Sub "arn:aws:s3:::${Bucket}/images/*"
+                Resource:               !Sub "arn:aws:s3:::${ImageBucketName}/*"
 
   WebappLambdaFunction:
     Type:                               "AWS::Lambda::Function"
@@ -301,7 +308,7 @@ Resources:
       Runtime:                          "java8"
       FunctionName:                     !Sub "${BaseName}-Webapp"
       Code:
-        S3Bucket:                       !Ref Bucket
+        S3Bucket:                       !Ref DeploymentBucketName
         S3Key:                          !Ref WebappJar
 
       Role:                             !GetAtt WebappExecutionRole.Arn
@@ -314,12 +321,45 @@ Resources:
           COGNITO_CLIENT_ID:            !Ref CognitoUserPoolClient
           DYNAMO_TABLE:                 !Ref DynamoMetadataTable
           SNS_TOPIC_ARN:                !Ref ResizeNotificationTopic
-          S3_IMAGE_BUCKET:              !Ref Bucket
+          S3_IMAGE_BUCKET:              !Ref ImageBucketName
           S3_IMAGE_PREFIX:              "images"
 
   ##
-  ## Front-End
+  ## API Load Balancer
   ##
+
+  LogsBucketPolicy:
+    Type:                               "AWS::S3::BucketPolicy"
+    Properties: 
+      Bucket:                           !Ref LogsBucketName
+      PolicyDocument: 
+        Version:                        "2008-10-17"
+        Statement:
+          -
+            Effect:                     "Allow"
+            Principal:
+              AWS:                      # per https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-access-logs.html
+                -                       "arn:aws:iam::127311923021:root"  # us-east-1
+                -                       "arn:aws:iam::033677994240:root"  # us-east-2
+                -                       "arn:aws:iam::027434742980:root"  # us-west-1
+                -                       "arn:aws:iam::797873946194:root"  # us-west-2
+                -                       "arn:aws:iam::985666609251:root"  # ca-central-1
+                -                       "arn:aws:iam::054676820928:root"  # eu-central-1
+                -                       "arn:aws:iam::156460612806:root"  # eu-west-1
+                -                       "arn:aws:iam::652711504416:root"  # eu-west-2
+                -                       "arn:aws:iam::009996457667:root"  # eu-west-3
+                -                       "arn:aws:iam::897822967062:root"  # eu-north-1
+                -                       "arn:aws:iam::754344448648:root"  # ap-east-1
+                -                       "arn:aws:iam::582318560864:root"  # ap-northeast-1
+                -                       "arn:aws:iam::600734575887:root"  # ap-northeast-2
+                -                       "arn:aws:iam::383597477331:root"  # ap-northeast-3
+                -                       "arn:aws:iam::114774131450:root"  # ap-southeast-1
+                -                       "arn:aws:iam::783225319266:root"  # ap-southeast-2
+                -                       "arn:aws:iam::718504428378:root"  # ap-south-1
+                -                       "arn:aws:iam::076674570225:root"  # me-south-1
+                -                       "arn:aws:iam::507241528517:root"  # sa-east-1
+            Action:                     "s3:PutObject"
+            Resource:                   !Sub "arn:aws:s3:::${LogsBucketName}/*"
 
   LoadBalancerSecurityGroup:
     Type:                               "AWS::EC2::SecurityGroup"
@@ -346,8 +386,7 @@ Resources:
       Subnets:                          !Ref PublicSubnetIds
       LoadBalancerAttributes:
         -                               { 'Key': 'access_logs.s3.enabled',  'Value': true }
-        -                               { 'Key': 'access_logs.s3.bucket',   'Value': !Ref Bucket }
-        -                               { 'Key': 'access_logs.s3.prefix',   'Value': !Ref LogsPrefix }
+        -                               { 'Key': 'access_logs.s3.bucket',   'Value': !Ref LogsBucketName }
 
   LoadBalancerHTTPListener:
     Type:                               "AWS::ElasticLoadBalancingV2::Listener"
@@ -397,11 +436,45 @@ Resources:
       FunctionName:                     !Ref WebappLambdaFunction
       Principal:                        "elasticloadbalancing.amazonaws.com"
 
+  ##
+  ## CloudFront
+  ##
+
   CloudFrontOriginIdentity:
     Type:                               "AWS::CloudFront::CloudFrontOriginAccessIdentity"
     Properties: 
       CloudFrontOriginAccessIdentityConfig: 
         Comment:                        !Sub "Origin identity for ${BaseName} deployment"
+
+  ImageBucketPolicy:
+    Type:                               "AWS::S3::BucketPolicy"
+    DependsOn:                          [ CloudFrontOriginIdentity ]
+    Properties: 
+      Bucket:                           !Ref ImageBucketName
+      PolicyDocument: 
+        Version:                        "2008-10-17"
+        Statement:
+          -
+            Effect:                     "Allow"
+            Principal:
+              CanonicalUser:            !GetAtt CloudFrontOriginIdentity.S3CanonicalUserId
+            Action:                     "s3:GetObject"
+            Resource:                   !Sub "arn:aws:s3:::${ImageBucketName}/*"
+
+  StaticBucketPolicy:
+    Type:                               "AWS::S3::BucketPolicy"
+    DependsOn:                          [ CloudFrontOriginIdentity ]
+    Properties: 
+      Bucket:                           !Ref StaticBucketName
+      PolicyDocument: 
+        Version:                        "2008-10-17"
+        Statement:
+          -
+            Effect:                     "Allow"
+            Principal:
+              CanonicalUser:            !GetAtt CloudFrontOriginIdentity.S3CanonicalUserId
+            Action:                     "s3:GetObject"
+            Resource:                   !Sub "arn:aws:s3:::${StaticBucketName}/*"
 
   CloudFront:
     Type:                               "AWS::CloudFront::Distribution"
@@ -413,13 +486,12 @@ Resources:
         Origins: 
           -
             Id:                         "StaticContent"
-            DomainName:                 !Sub "${Bucket}.s3.amazonaws.com"
-            OriginPath:                 "/static"
+            DomainName:                 !Sub "${StaticBucketName}.s3.amazonaws.com"
             S3OriginConfig:
               OriginAccessIdentity:     !Sub "origin-access-identity/cloudfront/${CloudFrontOriginIdentity}"
           -
             Id:                         "Images"
-            DomainName:                 !Sub "${Bucket}.s3.amazonaws.com"
+            DomainName:                 !Sub "${ImageBucketName}.s3.amazonaws.com"
             S3OriginConfig:
               OriginAccessIdentity:     !Sub "origin-access-identity/cloudfront/${CloudFrontOriginIdentity}"
           -
@@ -509,37 +581,3 @@ Resources:
             DefaultTTL:                 86400
             ForwardedValues: 
               QueryString:              false
-
-Outputs:
-
-  CognitoUserPoolOutput:
-    Description:                      "Cognito pool for application users"
-    Value:                            !Ref CognitoUserPool
-
-  CognitoUserPoolClientOutput:
-    Description:                      "Cognito client for application users"
-    Value:                            !Ref CognitoUserPoolClient
-
-  DynamoMetadataTableOutput:
-    Description:                      "DynamoDB table holding photo metadata"
-    Value:                            !Ref DynamoMetadataTable
-
-  ResizeNotificationTopicOutput:
-    Description:                      "SNS topic used to notify the resizer of new images"
-    Value:                            !Ref ResizeNotificationTopic
-
-  WebappLambdaFunctionOutput:
-    Description:                      "Lambda function implementing the web-app"
-    Value:                            !Ref WebappLambdaFunction
-
-  WebappLogGroupOutput:
-    Description:                      "CloudWatch log group for the web-app lambda function"
-    Value:                            !Ref WebappLogGroup
-
-  ResizerLambdaFunctionOutput:
-    Description:                      "Lambda function implementing the resizer"
-    Value:                            !Ref ResizerLambdaFunction
-
-  ResizerLogGroupOutput:
-    Description:                      "CloudWatch log group for the resizer lambda function"
-    Value:                            !Ref ResizerLogGroup
