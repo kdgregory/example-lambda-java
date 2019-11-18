@@ -1,11 +1,13 @@
 # Web-App Implementation
 
-The web-app is implemented as a single Lambda function, that expects and returns JSON formatted per the API Gateway
-Proxy [docs](http://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-set-up-simple-proxy.html).
+The web-app is implemented as a single Lambda function, that expects to be invoked from an
+[Application Load Balancer](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/lambda-functions.html).
 
 ## Request/Response Formats
 
-All requests and responses are JSON. Requests are defined by the service, and may not exist (in the case of a GET).
+Requests use a URL with the format `/api/ACTION`. They do not include additional components or
+query string parameters. All requests that provide data use a POST, with request-specific data
+as a JSON object in the request body.
 
 All response bodies have the same format: a wrapper with the following fields.
 
@@ -26,35 +28,33 @@ In addition to the `responseCode`, clients must also check the HTTP status code 
 
 ## Dispatcher
 
-Because Lambda only allows a single entry point, the web-app uses the [Front Controller](https://en.wikipedia.org/wiki/Front_controller)
-pattern, with the [Dispatcher](../Webapp-Lambda/src/main/java/com/kdgregory/example/javalambda/webapp/Dispatcher.java)
-being the entry point.
+At the time I wrote this example, the predominant way to write a Java web-app was the servlet API.
+Lambda functions, however, handled web requests using their own "event" format. While there is an
+[AWSLabs project]( https://github.com/awslabs/aws-serverless-java-container) to wrap Lambda
+request events with a servlet-compliant interface, it was developed at about the same time as
+this example and so I went down my own path.
 
-At the time this example was written, there wasn't a standard request handler for Lambda functions. The
-approach that I chose has the following steps:
+I decided to implement routing similar to that used by Node's [Express](https://expressjs.com/)
+framework: each action is associated with a handler function, and there's a simple `switch` that
+decides which function to invoke:
 
-* `Dispatcher.handler()` receives a proxy request from API Gateway and extracts relevant information,
-  including the action to be performed, the authentication tokens, and the request body. It stores all
-  of these in a `Request` object. This function is where all of the top-level exception handling lives;
-  exceptions are translated into an appropriate error status.
-* `Dispatcher.dispatch()` takes that request and identifies the service function that will handle it.
-  See below for more information.
-* The various service methods are expected to return a `Response` object or throw a catchable exception.
+```
+switch (request.getAction())
+{
+    case RequestActions.SIGNIN :
+        return invokeIf(request, HttpMethod.POST, r -> userService.signIn(r));
+    // ...
+    case RequestActions.UPLOAD :
+        return invokeIf(request, HttpMethod.POST, authorized(r -> photoService.upload(r)));
+    default:
+        return new Response(404);
+}
+```
 
-The `dispatch()` method is somewhat interesting because it uses actual lambdas (as in Java8 lambdas) to
-dispatch the request. At the top level there's a `switch` statement that looks at the request action.
-Assuming a match, the second-level check against request method is handled by the `invokeIf()` method.
-This method also takes a Java8 `Function` that accepts a `Request` and returns a `Response`, and invokes
-that function if the method matches.
-
-This approach has both positives and negatives. The primary negative is that it won't easily extend to
-multiple methods for the same action. That could be implemnted either with a varargs version of
-`invokeIf()`, or by replacing the switch with an if-else tree.
-
-On the other hand, invoking the service via a `Function` means that we can compose functions, and this
-is how authorization works: those services that need an auth check can wrap the service invocation
-with a function that performs that check. As implemented, if the auth check succeeds the `Request`
-object is updated with the ID of the user making that request.
+The `invokeIf()` method verifies that the request method matches the required method (GET or POST),
+and invokes a Java function if that's the case. This technique allows functional composition, which
+is how I managed authorization: `authorized()` takes a function and returns a new function that
+verifies the user is authorized before invoking the original function.
 
 
 ## Services
