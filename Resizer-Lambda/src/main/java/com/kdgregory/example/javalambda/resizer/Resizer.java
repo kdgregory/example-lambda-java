@@ -8,8 +8,6 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriter;
@@ -22,10 +20,12 @@ import org.slf4j.MDC;
 import net.sf.kdgcommons.collections.CollectionUtil;
 
 import com.amazonaws.services.lambda.runtime.Context;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.amazonaws.services.lambda.runtime.events.S3Event;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.event.S3EventNotification.S3EventNotificationRecord;
 
 import com.kdgregory.example.javalambda.shared.config.Environment;
-import com.kdgregory.example.javalambda.shared.messages.NewPhoto;
 import com.kdgregory.example.javalambda.shared.services.content.ContentService;
 import com.kdgregory.example.javalambda.shared.services.metadata.MetadataService;
 import com.kdgregory.example.javalambda.shared.services.metadata.PhotoMetadata;
@@ -33,25 +33,26 @@ import com.kdgregory.example.javalambda.shared.services.metadata.Sizes;
 
 
 /**
- *  Lambda handler: receives the request, extracts the information that we care
- *  about, calls a service method, and then packages the results.
+ *  Lambda handler invoked by image arriving in upload bucket. Verifies that we
+ *  have metadata for that image, then moves it into images bucket and creates
+ *  scaled images from it.
  */
 public class Resizer
 {
     private Logger logger = LoggerFactory.getLogger(getClass());
-
-    private ObjectMapper objectMapper;
+    
+    private AmazonS3 s3Client;
     private MetadataService metadataService;
     private ContentService contentService;
 
     public Resizer()
     {
-        objectMapper = new ObjectMapper();
+        s3Client = AmazonS3ClientBuilder.defaultClient();
         metadataService = new MetadataService(
                             Environment.getOrThrow(Environment.DYNAMO_TABLE));
         contentService = new ContentService(
                             Environment.getOrThrow(Environment.S3_IMAGE_BUCKET),
-                            Environment.getOrThrow(Environment.S3_IMAGE_PREFIX));
+                            "");
     }
 
 
@@ -59,32 +60,20 @@ public class Resizer
 //  Public methods
 //----------------------------------------------------------------------------
 
-    public void handler(Map<String,Object> message, Context lambdaContext)
+    public void handler(S3Event event, Context lambdaContext)
     {
         MDC.clear();
         MDC.put("requestId", lambdaContext.getAwsRequestId());
-
-        List<Map<String,Object>> records = (List<Map<String,Object>>)message.get("Records");
-        if (records == null)
-        {
-            logger.warn("bogus invocation: {}", message);
-            return;
-        }
         
-        logger.info("received {} messages", records.size());
+        logger.info("received {} record(s)", event.getRecords().size());
 
-        for (Map<String,Object> record : records)
+        for (S3EventNotificationRecord record : event.getRecords())
         {
-            String content = (String)CollectionUtil.getVia(record, "Sns", "Message");
-            try
-            {
-                NewPhoto photo = objectMapper.readValue(content, NewPhoto.class);
-                process(photo.getUserId(), photo.getPhotoId());
-            }
-            catch (Exception ex)
-            {
-                logger.error("failed to process message; content = {}", content, ex);
-            }
+            String bucket = record.getS3().getBucket().getName();
+            String key = record.getS3().getObject().getKey();
+            // TODO - verify that event refers to upload bucket
+            // TODO -check metadata service to verify key corresponds to uploaded file
+            logger.info("processing s3://{}/{}", bucket, key);
         }
     }
 

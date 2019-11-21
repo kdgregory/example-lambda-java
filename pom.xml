@@ -28,6 +28,7 @@
 
         <!-- all dependency versions are specified here -->
         <aws-lambda-core.version>1.2.0</aws-lambda-core.version>
+        <aws-lambda-events.version>2.2.7</aws-lambda-events.version>
         <aws-sdk.version>1.11.600</aws-sdk.version>
         <aws-xray.version>2.3.0</aws-xray.version>
         <com-kdgregory-logging.version>2.2.2</com-kdgregory-logging.version>

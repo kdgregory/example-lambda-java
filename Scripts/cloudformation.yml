@@ -160,9 +160,15 @@ Resources:
 
   UploadBucket:
     Type:                               "AWS::S3::Bucket"
+    DependsOn:                          [ ResizerLambdaFunction ]
     Properties: 
       BucketName:                       !Ref UploadBucketName
       AccessControl:                    "Private"
+      NotificationConfiguration:
+        LambdaConfigurations:
+          -
+            Event:                      "s3:ObjectCreated:*"
+            Function:                   !GetAtt ResizerLambdaFunction.Arn
       LifecycleConfiguration: 
         Rules:
           -
@@ -270,7 +276,7 @@ Resources:
                 -                       "dynamodb:Query"
               Resource:                 !GetAtt DynamoMetadataTable.Arn
         -
-          PolicyName:                   !Sub "${BaseName}-ResizerBucketPolicy"
+          PolicyName:                   !Sub "${BaseName}-ResizerImageBucketPolicy"
           PolicyDocument:
             Version:                    "2012-10-17"
             Statement:
@@ -279,6 +285,16 @@ Resources:
                 -                       "s3:Get*"
                 -                       "s3:Put*"
               Resource:                 !Sub "arn:aws:s3:::${ImageBucketName}/*"
+        -
+          PolicyName:                   !Sub "${BaseName}-ResizerUploadBucketPolicy"
+          PolicyDocument:
+            Version:                    "2012-10-17"
+            Statement:
+              Effect:                   "Allow"
+              Action:
+                -                       "s3:Get*"
+                -                       "s3:Delete*"
+              Resource:                 !Sub "arn:aws:s3:::${UploadBucketName}/*"
 
 
   ResizerLambdaFunction:
@@ -299,23 +315,6 @@ Resources:
         Variables:
           DYNAMO_TABLE:                 !Ref DynamoMetadataTable
           S3_IMAGE_BUCKET:              !Ref ImageBucketName
-          S3_IMAGE_PREFIX:              "images"
-
-
-  ResizeNotificationTopic:
-    Type:                               "AWS::SNS::Topic"
-    Properties:
-      TopicName:                        !Sub "${BaseName}-Notifications"
-      DisplayName:                      !Sub "Used by the ${BaseName} example to notify the resizer of new images"
-
-
-  ResizerSubscription:
-    Type:                               "AWS::SNS::Subscription"
-    DependsOn:                          [ ResizerLambdaFunction, ResizeNotificationTopic ]
-    Properties:
-      Protocol:                         "lambda"
-      Endpoint:                         !GetAtt ResizerLambdaFunction.Arn
-      TopicArn:                         !Ref ResizeNotificationTopic
 
 
   ResizerInvocationPermission:
@@ -323,8 +322,8 @@ Resources:
     Properties:
       Action:                           "lambda:InvokeFunction"
       FunctionName:                     !GetAtt ResizerLambdaFunction.Arn
-      Principal:                        "sns.amazonaws.com"
-      SourceArn:                        !Ref ResizeNotificationTopic
+      Principal:                        "s3.amazonaws.com"
+      SourceArn:                        !GetAtt UploadBucket.Arn
 
   ##
   ## WebApp Lambda
@@ -340,7 +339,7 @@ Resources:
 
   WebappExecutionRole:
     Type:                               "AWS::IAM::Role"
-    DependsOn:                          [ CognitoUserPool, DynamoMetadataTable, ResizeNotificationTopic, WebappLogGroup ]
+    DependsOn:                          [ CognitoUserPool, DynamoMetadataTable, WebappLogGroup ]
     Properties:
       RoleName:                         !Sub "${BaseName}-WebappExecutionRole"
       AssumeRolePolicyDocument:
@@ -390,15 +389,6 @@ Resources:
                   -                     "dynamodb:Query"
                 Resource:               !GetAtt DynamoMetadataTable.Arn
         -
-          PolicyName:                   !Sub "${BaseName}-WebappSNSPolicy"
-          PolicyDocument:
-            Version:                    "2012-10-17"
-            Statement:
-              -
-                Effect:                 "Allow"
-                Action:                 "sns:Publish"
-                Resource:               !Ref ResizeNotificationTopic
-        -
           PolicyName:                   !Sub "${BaseName}-WebappBucketPolicy"
           PolicyDocument:
             Version:                    "2012-10-17"
@@ -434,9 +424,7 @@ Resources:
           COGNITO_POOL_ID:              !Ref CognitoUserPool
           COGNITO_CLIENT_ID:            !Ref CognitoUserPoolClient
           DYNAMO_TABLE:                 !Ref DynamoMetadataTable
-          SNS_TOPIC_ARN:                !Ref ResizeNotificationTopic
           S3_IMAGE_BUCKET:              !Ref ImageBucketName
-          S3_IMAGE_PREFIX:              "images"
 
 
   ##
