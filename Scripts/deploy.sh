@@ -23,6 +23,7 @@ PUBLIC_SUBNETS=$4
 DEPLOYMENT_BUCKET=${BASE_BUCKETNAME}-deployment
 STATIC_BUCKET=${BASE_BUCKETNAME}-static
 IMAGES_BUCKET=${BASE_BUCKETNAME}-images
+UPLOADS_BUCKET=${BASE_BUCKETNAME}-uploads
 LOGS_BUCKET=${BASE_BUCKETNAME}-logs
 
 ################################################################################
@@ -32,15 +33,13 @@ mvn clean install
 ################################################################################
 
 echo ""
-echo "creating buckets"
+echo "creating static and deployment buckets"
 
 # note: if you try to re-create a bucket it will silently fail
 #       ... this is a Good Thing
 
 aws s3 mb s3://$DEPLOYMENT_BUCKET
 aws s3 mb s3://$STATIC_BUCKET
-aws s3 mb s3://$IMAGES_BUCKET
-aws s3 mb s3://$LOGS_BUCKET
 
 ################################################################################
 
@@ -90,6 +89,10 @@ cat > /tmp/cfparams.json <<EOF
   {
     "ParameterKey":     "ImageBucketName",
     "ParameterValue":   "${IMAGES_BUCKET}"
+  },
+  {
+    "ParameterKey":     "UploadBucketName",
+    "ParameterValue":   "${UPLOADS_BUCKET}"
   },
   {
     "ParameterKey":     "LogsBucketName",
