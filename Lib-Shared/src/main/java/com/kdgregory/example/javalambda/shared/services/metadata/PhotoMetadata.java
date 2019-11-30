@@ -12,9 +12,7 @@ import java.util.stream.Collectors;
 import net.sf.kdgcommons.lang.ObjectUtil;
 import net.sf.kdgcommons.lang.StringUtil;
 
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-
-import com.kdgregory.example.javalambda.shared.util.DynamoHelper;
+import com.amazonaws.services.dynamodbv2.document.Item;
 
 
 /**
@@ -34,7 +32,7 @@ public class PhotoMetadata
     private String mimetype;
     private String description;
     private Long uploadedAt;
-    private Set<Sizes> sizes;
+    private EnumSet<Sizes> sizes;
 
 
     public PhotoMetadata(String id, String user, String filename, String mimeType, String description, Long uploadedAt, Collection<String> sizes)
@@ -56,9 +54,8 @@ public class PhotoMetadata
 
 
     /**
-     *  Constructs an instance using the map provided by a client upload.
-     *  Note that this list isn't expected to contain sizes, so we default
-     *  to ORIGINAL.
+     *  Constructs an instance using the map provided by a client upload. The
+     *  size is defaulted to ORIGINAL.
      */
     public static PhotoMetadata fromClientMap(Map<String,Object> map)
     {
@@ -74,18 +71,18 @@ public class PhotoMetadata
 
 
     /**
-     *  Constructs an instance using the map provided by a DynamoDB scan.
+     *  Constructs an instance using a DynamoDB Item (from the Document interface).
      */
-    public static PhotoMetadata fromDynamoMap(Map<String,AttributeValue> map)
+    public static PhotoMetadata fromDynamoItem(Item item)
     {
         return new PhotoMetadata(
-            DynamoHelper.getS(map, Fields.ID),
-            DynamoHelper.getS(map, Fields.USERNAME),
-            DynamoHelper.getS(map, Fields.FILENAME),
-            DynamoHelper.getS(map, Fields.MIMETYPE),
-            DynamoHelper.getS(map, Fields.DESCRIPTION),
-            DynamoHelper.getN(map, Fields.UPLOADED_AT),
-            DynamoHelper.getSS(map, Fields.SIZES));
+            item.getString(Fields.ID),
+            item.getString(Fields.USERNAME),
+            item.getString(Fields.FILENAME),
+            item.getString(Fields.MIMETYPE),
+            item.getString(Fields.DESCRIPTION),
+            item.getLong(Fields.UPLOADED_AT),
+            item.getStringSet(Fields.SIZES));
     }
 
 
@@ -140,7 +137,8 @@ public class PhotoMetadata
 //----------------------------------------------------------------------------
 
     /**
-     *  Constructs a map suitable for returning to the client.
+     *  Constructs a map suitable for returning to the client. In this form,
+     *  the array of sizes has been expanded out to include all details.
      */
     public Map<String,Object> toClientMap()
     {
@@ -160,19 +158,20 @@ public class PhotoMetadata
 
 
     /**
-     *  Constructs a map suitable for upload to Dynamo.
+     *  Constructs a DynamoDB Item for upload.
      */
-    public Map<String,AttributeValue> toDynamoMap()
+    public Item toDynamoItem()
     {
-        Map<String,AttributeValue> result = new HashMap<String,AttributeValue>();
-        DynamoHelper.put(result, Fields.ID,           id);
-        DynamoHelper.put(result, Fields.USERNAME,     user);
-        DynamoHelper.put(result, Fields.FILENAME,     filename);
-        DynamoHelper.put(result, Fields.MIMETYPE,     mimetype);
-        DynamoHelper.put(result, Fields.DESCRIPTION,  description);
-        DynamoHelper.put(result, Fields.UPLOADED_AT,  uploadedAt);
-        DynamoHelper.put(result, Fields.SIZES,        sizes);
-        return result;
+        Set<String> sizeStrings = sizes.stream().map(Sizes::name)
+                                  .collect(Collectors.toSet());
+        return new Item()
+               .withString(Fields.ID,           id)
+               .withString(Fields.USERNAME,     user)
+               .withString(Fields.FILENAME,     filename)
+               .withString(Fields.MIMETYPE,     mimetype)
+               .withString(Fields.DESCRIPTION,  description)
+               .withLong(Fields.UPLOADED_AT,    uploadedAt)
+               .withStringSet(Fields.SIZES,     sizeStrings);
     }
 
 

@@ -17,12 +17,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
-import net.sf.kdgcommons.collections.CollectionUtil;
-
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.S3Event;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.event.S3EventNotification.S3EventNotificationRecord;
 
 import com.kdgregory.example.javalambda.shared.config.Environment;
@@ -40,14 +36,12 @@ import com.kdgregory.example.javalambda.shared.services.metadata.Sizes;
 public class Resizer
 {
     private Logger logger = LoggerFactory.getLogger(getClass());
-    
-    private AmazonS3 s3Client;
+
     private MetadataService metadataService;
     private ContentService contentService;
 
     public Resizer()
     {
-        s3Client = AmazonS3ClientBuilder.defaultClient();
         metadataService = new MetadataService(
                             Environment.getOrThrow(Environment.DYNAMO_TABLE));
         contentService = new ContentService(
@@ -64,7 +58,7 @@ public class Resizer
     {
         MDC.clear();
         MDC.put("requestId", lambdaContext.getAwsRequestId());
-        
+
         logger.info("received {} record(s)", event.getRecords().size());
 
         for (S3EventNotificationRecord record : event.getRecords())
@@ -84,8 +78,8 @@ public class Resizer
 
     private void process(String userId, String photoId)
     {
-        logger.info("processing: user {} photo {}", userId, photoId);
-        PhotoMetadata metadata = CollectionUtil.first(metadataService.retrieve(userId, photoId));
+        logger.info("processing: user {}, photo {}", userId, photoId);
+        PhotoMetadata metadata = metadataService.retrieve(photoId);
         if (metadata == null)
         {
             logger.warn("no metadata for photo {}; skipping resize", photoId);

@@ -98,10 +98,10 @@ Resources:
       TableName:                        !Sub "${BaseName}-Metadata"
       AttributeDefinitions:
         -
-          AttributeName:                "username"
+          AttributeName:                "id"
           AttributeType:                "S"
         -
-          AttributeName:                "id"
+          AttributeName:                "username"
           AttributeType:                "S"
       KeySchema:
         -
@@ -110,6 +110,18 @@ Resources:
         -
           AttributeName:                "id"
           KeyType:                      "RANGE"
+      GlobalSecondaryIndexes:
+        -
+          IndexName:                    "byID"
+          Projection: 
+            ProjectionType:             "KEYS_ONLY"
+          ProvisionedThroughput:
+            ReadCapacityUnits:          5
+            WriteCapacityUnits:         5
+          KeySchema: 
+            -
+              AttributeName:            "id"
+              KeyType:                  "HASH"
       ProvisionedThroughput:
         ReadCapacityUnits:              10
         WriteCapacityUnits:             5
@@ -118,7 +130,7 @@ Resources:
   ## Buckets (except static and deployment)
   ##
 
-  # note: this bucket was created before the stack
+  # note: this bucket is created before the stack
   StaticBucketPolicy:
     Type:                               "AWS::S3::BucketPolicy"
     DependsOn:                          [ CloudFrontOriginIdentity ]

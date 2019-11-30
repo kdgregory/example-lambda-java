@@ -76,7 +76,7 @@ public class PhotoService
         logger.info("listPhotos: user {}", userId);
 
          List<Map<String,Object>> result = new ArrayList<Map<String,Object>>();
-         for (PhotoMetadata item : metadataService.retrieve(userId, null))
+         for (PhotoMetadata item : metadataService.retrieveByUser(userId))
          {
              result.add(item.toClientMap());
          }
