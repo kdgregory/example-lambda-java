@@ -2,7 +2,6 @@
 package com.kdgregory.example.javalambda.shared.services.content;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,14 +23,21 @@ public class ContentService
     private Logger logger = LoggerFactory.getLogger(getClass());
 
     private AmazonS3 s3Client;
-    private String s3BucketName;
-    private String s3ImagePrefix;
+    private String uploadBucket;
+    private String imageBucket;
 
-    public ContentService(String s3BucketName, String s3ImagePrefix)
+
+    public ContentService(AmazonS3 s3Client, String uploadBucket, String imageBucket)
     {
-        s3Client = AmazonS3ClientBuilder.defaultClient();
-        this.s3BucketName = s3BucketName;
-        this.s3ImagePrefix = s3ImagePrefix;
+        this.s3Client = s3Client;
+        this.uploadBucket = uploadBucket;
+        this.imageBucket = imageBucket;
+    }
+
+
+    public ContentService(String uploadBucket, String imageBucket)
+    {
+        this(AmazonS3ClientBuilder.defaultClient(), uploadBucket, imageBucket);
     }
 
 
@@ -40,24 +46,62 @@ public class ContentService
 //----------------------------------------------------------------------------
 
     /**
-     *  Retrieves the content for a photo, null if unable to find the photo.
+     *  Stores the content for a photo at a given size.
      */
-    public byte[] download(String photoId, Sizes size)
+    public void store(String photoId, String mimeType, Sizes size, byte[] content)
+    {
+        logger.debug("uploading: photo {}, size = {}, content-length = {}",
+                     photoId, size.name(), content.length);
+
+        ObjectMetadata s3Meta = new ObjectMetadata();
+        s3Meta.setContentLength(content.length);
+        s3Meta.setContentType(mimeType);
+        PutObjectResult s3Response = s3Client.putObject(
+                                        imageBucket,
+                                        s3Key(photoId, size),
+                                        new ByteArrayInputStream(content),
+                                        s3Meta);
+
+        logger.debug("upload successful: photo {}, etag {}", photoId, s3Response.getETag());
+    }
+
+
+    /**
+     *  Retrieves the content for a photo at a given size, null if unable to find the photo.
+     */
+    public byte[] retrieve(String photoId, Sizes size)
     {
         logger.debug("retrieving content for photo {}, size {}", photoId, size);
         S3Object s3Obj = null;
         try
         {
-            s3Obj = s3Client.getObject(s3BucketName, s3Key(photoId, size));
-            ByteArrayOutputStream buf = new ByteArrayOutputStream();
-            IOUtil.copy(s3Obj.getObjectContent(), buf);
-            byte[] content = buf.toByteArray();
+            s3Obj = s3Client.getObject(imageBucket, s3Key(photoId, size));
+            long contentLength = s3Obj.getObjectMetadata().getContentLength();
+            if (contentLength > Integer.MAX_VALUE)
+            {
+                logger.error("photo {} is too large to read into a byte array: {} bytes", photoId, contentLength);
+                return null;
+            }
+
+            byte[] content = new byte[(int)contentLength];
+            IOUtil.readFully(s3Obj.getObjectContent(), content);
             logger.debug("retrieved {} bytes for photo {}", content.length, photoId);
             return content;
         }
+        catch (AmazonS3Exception ex)
+        {
+            if (ex.getStatusCode() == 404)
+            {
+                logger.warn("photo {} size {} does not exist", photoId, size.name());
+                return null;
+            }
+
+            logger.error("unexpected exception retrieving photo {} size {}", photoId, size.name(), ex);
+            return null;
+        }
         catch (Exception ex)
         {
-            logger.error("unable to read content for {} size {}", photoId, size.name(), ex);
+            logger.error("unexpected exception retrieving photo {} size {}", photoId, size.name(), ex);
             return null;
         }
         finally
@@ -68,23 +112,16 @@ public class ContentService
 
 
     /**
-     *  Stores the content for a photo.
+     *  Moves an uploaded photo from the upload bucket to the image bucket, storing
+     *  it as "ORIGINAL" size.
      */
-    public void upload(String photoId, String mimeType, Sizes size, byte[] content)
+    public void moveUploadToImageBucket(String photoId)
     {
-        logger.debug("uploading: photo {}, size = {}, content-length = {}",
-                     photoId, size.name(), content.length);
-
-        ObjectMetadata s3Meta = new ObjectMetadata();
-        s3Meta.setContentLength(content.length);
-        s3Meta.setContentType(mimeType);
-        PutObjectResult s3Response = s3Client.putObject(
-                                        s3BucketName,
-                                        s3Key(photoId, size),
-                                        new ByteArrayInputStream(content),
-                                        s3Meta);
-
-        logger.debug("upload successful: photo {}, etag {}", photoId, s3Response.getETag());
+        String destname = photoId + "/" + Sizes.ORIGINAL.name();
+        logger.debug("moving object s3://{}/{} to s3://{}/{}",
+                     uploadBucket, photoId, imageBucket, destname);
+        s3Client.copyObject(uploadBucket, photoId, imageBucket, destname);
+        s3Client.deleteObject(uploadBucket, photoId);
     }
 
 
@@ -97,6 +134,6 @@ public class ContentService
      */
     private String s3Key(String photoId, Sizes size)
     {
-        return s3ImagePrefix + "/" + photoId + "/" + size.name();
+        return photoId + "/" + size.name();
     }
 }

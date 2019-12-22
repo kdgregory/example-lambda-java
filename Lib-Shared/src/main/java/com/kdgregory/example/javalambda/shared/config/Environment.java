@@ -14,8 +14,8 @@ public class Environment
     public final static String  COGNITO_CLIENT_ID   = "COGNITO_CLIENT_ID";
     public final static String  DYNAMO_TABLE        = "DYNAMO_TABLE";
     public final static String  SNS_TOPIC_ARN       = "SNS_TOPIC_ARN";
+    public final static String  S3_UPLOAD_BUCKET    = "S3_UPLOAD_BUCKET";
     public final static String  S3_IMAGE_BUCKET     = "S3_IMAGE_BUCKET";
-    public final static String  S3_IMAGE_PREFIX     = "S3_IMAGE_PREFIX";
 
 
     public static String getOrThrow(String varname)

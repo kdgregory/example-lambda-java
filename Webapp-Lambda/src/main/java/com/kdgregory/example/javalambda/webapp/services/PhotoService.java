@@ -137,7 +137,7 @@ public class PhotoService
         }
 
         metadataService.store(metadata);
-        contentService.upload(metadata.getId(), metadata.getMimetype(), Sizes.ORIGINAL, content);
+        contentService.store(metadata.getId(), metadata.getMimetype(), Sizes.ORIGINAL, content);
 
         return new Response(ResponseCodes.SUCCESS);
     }

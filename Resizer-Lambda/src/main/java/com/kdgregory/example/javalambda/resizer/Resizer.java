@@ -36,17 +36,20 @@ import com.kdgregory.example.javalambda.shared.services.metadata.Sizes;
 public class Resizer
 {
     private Logger logger = LoggerFactory.getLogger(getClass());
-
+    
+    private String uploadBucket;
     private MetadataService metadataService;
     private ContentService contentService;
 
     public Resizer()
     {
+        uploadBucket = Environment.getOrThrow(Environment.S3_UPLOAD_BUCKET);
+        
         metadataService = new MetadataService(
                             Environment.getOrThrow(Environment.DYNAMO_TABLE));
         contentService = new ContentService(
-                            Environment.getOrThrow(Environment.S3_IMAGE_BUCKET),
-                            "");
+                            uploadBucket,
+                            Environment.getOrThrow(Environment.S3_IMAGE_BUCKET));
     }
 
 
@@ -65,9 +68,21 @@ public class Resizer
         {
             String bucket = record.getS3().getBucket().getName();
             String key = record.getS3().getObject().getKey();
-            // TODO - verify that event refers to upload bucket
-            // TODO -check metadata service to verify key corresponds to uploaded file
-            logger.info("processing s3://{}/{}", bucket, key);
+            
+            if (! uploadBucket.equals(bucket))
+            {
+                logger.warn("ignoring invalid notification: s3://{}/{}", bucket, key);
+                continue;
+            }
+            
+            PhotoMetadata metadata = metadataService.retrieve(key);
+            if (metadata == null)
+            {
+                logger.warn("ignoring notification with no metadata: {}", key);
+                continue;
+            }
+
+            process(metadata);
         }
     }
 
@@ -76,32 +91,34 @@ public class Resizer
 //  Internals
 //----------------------------------------------------------------------------
 
-    private void process(String userId, String photoId)
+    private void process(PhotoMetadata metadata)
     {
-        logger.info("processing: user {}, photo {}", userId, photoId);
-        PhotoMetadata metadata = metadataService.retrieve(photoId);
-        if (metadata == null)
+        String photoId = metadata.getId();
+        logger.info("processing photo {} for user {}", photoId, metadata.getUser());
+        try
         {
-            logger.warn("no metadata for photo {}; skipping resize", photoId);
-            return;
-        }
-
-        BufferedImage img = loadImage(photoId);
-        if (img == null)
-        {
-            logger.warn("no content for photo {}; skipping resize", photoId);
-            return;
-        }
-
-        for (Sizes size : Sizes.values())
-        {
-            if (! metadata.getSizes().contains(size))
+            BufferedImage img = loadImage(photoId);
+            if (img == null)
             {
-                resizeTo(metadata, img, size);
+                logger.warn("no content for photo {}; skipping resize", photoId);
+                return;
             }
-        }
 
-        metadataService.store(metadata);
+            for (Sizes size : Sizes.values())
+            {
+                if (! metadata.getSizes().contains(size))
+                {
+                    resizeTo(metadata, img, size);
+                }
+            }
+    
+            metadataService.store(metadata);
+        }
+        catch (Exception ex)
+        {
+            logger.error("exception when processing photo {}", metadata.getId(), ex);
+        }
+        
     }
 
 
@@ -111,7 +128,7 @@ public class Resizer
      */
     private BufferedImage loadImage(String photoId)
     {
-        byte[] content = contentService.download(photoId, Sizes.ORIGINAL);
+        byte[] content = contentService.retrieve(photoId, Sizes.ORIGINAL);
         if (content == null)
             return null;
 
@@ -166,7 +183,7 @@ public class Resizer
             writer.setOutput(ios);
             writer.write(dst);
 
-            contentService.upload(metadata.getId(), metadata.getMimetype(), size, bos.toByteArray());
+            contentService.store(metadata.getId(), metadata.getMimetype(), size, bos.toByteArray());
             metadata.getSizes().add(size);
         }
         catch (Exception ex)
