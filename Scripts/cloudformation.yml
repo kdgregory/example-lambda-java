@@ -286,7 +286,10 @@ Resources:
                 -                       "dynamodb:GetItem"
                 -                       "dynamodb:PutItem"
                 -                       "dynamodb:Query"
-              Resource:                 !GetAtt DynamoMetadataTable.Arn
+              Resource:
+                -                       !Sub "${DynamoMetadataTable.Arn}"
+                -                       !Sub "${DynamoMetadataTable.Arn}/*"
+
         -
           PolicyName:                   !Sub "${BaseName}-ResizerImageBucketPolicy"
           PolicyDocument:
