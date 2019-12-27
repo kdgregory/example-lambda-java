@@ -1,6 +1,7 @@
 // Copyright (c) Keith D Gregory, all rights reserved
 package com.kdgregory.example.javalambda.services.metadata;
 
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -16,8 +17,6 @@ import com.kdgregory.example.javalambda.shared.services.metadata.Sizes;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
-
-import net.sf.kdgcommons.collections.CollectionUtil;
 
 
 public class TestPhotoMetadata
@@ -51,7 +50,7 @@ public class TestPhotoMetadata
         assertEquals(Fields.MIMETYPE,     TEST_MIME,                            meta.getMimetype());
         assertEquals(Fields.DESCRIPTION,  TEST_DESC,                            meta.getDescription());
         assertEquals(Fields.UPLOADED_AT,  Long.valueOf(TEST_TIMESTAMP),         meta.getUploadedAt());
-        assertEquals(Fields.SIZES,        CollectionUtil.asSet(Sizes.ORIGINAL), meta.getSizes());
+        assertEquals(Fields.SIZES,        Collections.emptySet(),               meta.getSizes());
 
         assertTrue("valid", meta.isValid());
     }

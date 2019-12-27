@@ -3,6 +3,7 @@ package com.kdgregory.example.javalambda.shared.services.metadata;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
@@ -54,8 +55,8 @@ public class PhotoMetadata
 
 
     /**
-     *  Constructs an instance using the map provided by a client upload. The
-     *  size is defaulted to ORIGINAL.
+     *  Constructs an instance using the map provided by a client upload. Note
+     *  that instance sizes are left empty.
      */
     public static PhotoMetadata fromClientMap(Map<String,Object> map)
     {
@@ -66,7 +67,7 @@ public class PhotoMetadata
             (String)map.get(Fields.MIMETYPE),
             (String)map.get(Fields.DESCRIPTION),
             (Long)map.get(Fields.UPLOADED_AT),
-            Arrays.asList(Sizes.ORIGINAL.name()));
+            Arrays.asList());
     }
 
 
@@ -75,6 +76,7 @@ public class PhotoMetadata
      */
     public static PhotoMetadata fromDynamoItem(Item item)
     {
+
         return new PhotoMetadata(
             item.getString(Fields.ID),
             item.getString(Fields.USERNAME),
@@ -82,7 +84,7 @@ public class PhotoMetadata
             item.getString(Fields.MIMETYPE),
             item.getString(Fields.DESCRIPTION),
             item.getLong(Fields.UPLOADED_AT),
-            item.getStringSet(Fields.SIZES));
+            ObjectUtil.defaultValue(item.getStringSet(Fields.SIZES), Collections.emptySet()));
     }
 
 
@@ -186,5 +188,19 @@ public class PhotoMetadata
                      || StringUtil.isEmpty(mimetype);
 
         return !fail;
+    }
+
+
+    @Override
+    public String toString()
+    {
+        return getClass().getSimpleName()
+             + "[" + id + ": "
+             + "username = " + user + ", "
+             + "filename = " + filename + " ,"
+             + "mimetype = " + mimetype + ", "
+             + "uploadedAt = " + uploadedAt + ", "
+             + "sizes = " + sizes
+             + "]";
     }
 }
