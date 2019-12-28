@@ -1,5 +1,5 @@
 // Copyright (c) Keith D Gregory, all rights reserved
-package com.kdgregory.example.javalambda.util;
+package com.kdgregory.example.javalambda.shared.util;
 
 import java.util.Arrays;
 import java.util.HashMap;

@@ -1,5 +1,5 @@
 // Copyright (c) Keith D Gregory, all rights reserved
-package com.kdgregory.example.javalambda.services.metadata;
+package com.kdgregory.example.javalambda.shared.services.metadata;
 
 import java.util.Collections;
 import java.util.EnumSet;
