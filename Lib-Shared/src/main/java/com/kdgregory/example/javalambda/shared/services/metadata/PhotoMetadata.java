@@ -66,7 +66,7 @@ public class PhotoMetadata
             (String)map.get(Fields.FILENAME),
             (String)map.get(Fields.MIMETYPE),
             (String)map.get(Fields.DESCRIPTION),
-            (Long)map.get(Fields.UPLOADED_AT),
+            System.currentTimeMillis(),
             Arrays.asList());
     }
 

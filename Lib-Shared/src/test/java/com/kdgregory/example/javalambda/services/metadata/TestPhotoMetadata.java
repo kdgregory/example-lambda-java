@@ -11,6 +11,8 @@ import java.util.stream.Collectors;
 
 import com.amazonaws.services.dynamodbv2.document.Item;
 
+import static net.sf.kdgcommons.test.NumericAsserts.*;
+
 import com.kdgregory.example.javalambda.shared.services.metadata.Fields;
 import com.kdgregory.example.javalambda.shared.services.metadata.PhotoMetadata;
 import com.kdgregory.example.javalambda.shared.services.metadata.Sizes;
@@ -34,13 +36,14 @@ public class TestPhotoMetadata
     @Test
     public void testFromClientMap() throws Exception
     {
+        long now = System.currentTimeMillis();
+
         Map<String,Object> map = new HashMap<String,Object>();
         map.put(Fields.ID,              TEST_ID);
         map.put(Fields.USERNAME,        TEST_USER);
         map.put(Fields.FILENAME,        TEST_FILE);
         map.put(Fields.MIMETYPE,        TEST_MIME);
         map.put(Fields.DESCRIPTION,     TEST_DESC);
-        map.put(Fields.UPLOADED_AT,     TEST_TIMESTAMP);
 
         PhotoMetadata meta = PhotoMetadata.fromClientMap(map);
 
@@ -49,8 +52,10 @@ public class TestPhotoMetadata
         assertEquals(Fields.FILENAME,     TEST_FILE,                            meta.getFilename());
         assertEquals(Fields.MIMETYPE,     TEST_MIME,                            meta.getMimetype());
         assertEquals(Fields.DESCRIPTION,  TEST_DESC,                            meta.getDescription());
-        assertEquals(Fields.UPLOADED_AT,  Long.valueOf(TEST_TIMESTAMP),         meta.getUploadedAt());
+        assertInRange(Fields.UPLOADED_AT, now - 100, now + 100,                 meta.getUploadedAt().longValue());
         assertEquals(Fields.SIZES,        Collections.emptySet(),               meta.getSizes());
+
+
 
         assertTrue("valid", meta.isValid());
     }
