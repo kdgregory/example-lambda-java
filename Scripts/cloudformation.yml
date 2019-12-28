@@ -324,7 +324,7 @@ Resources:
         S3Key:                          !Ref ResizerJar
       Role:                             !GetAtt ResizerExecutionRole.Arn
       Handler:                          "com.kdgregory.example.javalambda.resizer.Resizer::handler"
-      MemorySize:                       256
+      MemorySize:                       1024
       Timeout:                          30
       Environment:
         Variables:
