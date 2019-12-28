@@ -23,10 +23,12 @@ import com.amazonaws.services.lambda.runtime.events.S3Event;
 import com.amazonaws.services.s3.event.S3EventNotification.S3EventNotificationRecord;
 
 import com.kdgregory.example.javalambda.shared.config.Environment;
-import com.kdgregory.example.javalambda.shared.services.content.ContentService;
-import com.kdgregory.example.javalambda.shared.services.metadata.MetadataService;
-import com.kdgregory.example.javalambda.shared.services.metadata.PhotoMetadata;
-import com.kdgregory.example.javalambda.shared.services.metadata.Sizes;
+import com.kdgregory.example.javalambda.shared.data.PhotoMetadata;
+import com.kdgregory.example.javalambda.shared.data.Sizes;
+import com.kdgregory.example.javalambda.shared.services.ContentService;
+import com.kdgregory.example.javalambda.shared.services.MetadataService;
+import com.kdgregory.example.javalambda.shared.services.impl.ContentServiceImpl;
+import com.kdgregory.example.javalambda.shared.services.impl.MetadataServiceImpl;
 
 
 /**
@@ -46,9 +48,9 @@ public class Resizer
     {
         uploadBucket = Environment.getOrThrow(Environment.S3_UPLOAD_BUCKET);
 
-        metadataService = new MetadataService(
+        metadataService = new MetadataServiceImpl(
                             Environment.getOrThrow(Environment.DYNAMO_TABLE));
-        contentService = new ContentService(
+        contentService = new ContentServiceImpl(
                             uploadBucket,
                             Environment.getOrThrow(Environment.S3_IMAGE_BUCKET));
     }
@@ -121,7 +123,7 @@ public class Resizer
                     metadata.getSizes().add(size);
                 }
             }
-            
+
             metadataService.store(metadata);
         }
         catch (Exception ex)

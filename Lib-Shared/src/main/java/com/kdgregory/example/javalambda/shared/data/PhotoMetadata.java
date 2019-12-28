@@ -1,5 +1,5 @@
 // Copyright (c) Keith D Gregory, all rights reserved
-package com.kdgregory.example.javalambda.shared.services.metadata;
+package com.kdgregory.example.javalambda.shared.data;
 
 import java.util.Arrays;
 import java.util.Collection;

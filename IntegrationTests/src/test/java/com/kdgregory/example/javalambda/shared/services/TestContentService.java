@@ -25,8 +25,8 @@ import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 
-import com.kdgregory.example.javalambda.shared.services.content.ContentService;
-import com.kdgregory.example.javalambda.shared.services.metadata.Sizes;
+import com.kdgregory.example.javalambda.shared.data.Sizes;
+import com.kdgregory.example.javalambda.shared.services.impl.ContentServiceImpl;
 
 
 public class TestContentService
@@ -82,7 +82,7 @@ public class TestContentService
     @Before
     public void setUp() throws Exception
     {
-        service = new ContentService(s3Client, UPLOAD_BUCKET_NAME, IMAGE_BUCKET_NAME);
+        service = new ContentServiceImpl(s3Client, UPLOAD_BUCKET_NAME, IMAGE_BUCKET_NAME);
 
         try (InputStream contentSource = getClass().getResourceAsStream(TEST_IMAGE_FILENAME))
         {

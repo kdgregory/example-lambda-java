@@ -1,5 +1,5 @@
 // Copyright (c) Keith D Gregory, all rights reserved
-package com.kdgregory.example.javalambda.shared.services.metadata;
+package com.kdgregory.example.javalambda.shared.data;
 
 /**
  *  Names for all metadata fields. These are used both as Dynamo attribute names

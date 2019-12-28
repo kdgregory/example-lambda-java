@@ -14,11 +14,13 @@ import net.sf.kdgcommons.codec.Base64Codec;
 import net.sf.kdgcommons.lang.StringUtil;
 
 import com.kdgregory.example.javalambda.shared.config.Environment;
-import com.kdgregory.example.javalambda.shared.services.content.ContentService;
-import com.kdgregory.example.javalambda.shared.services.metadata.Fields;
-import com.kdgregory.example.javalambda.shared.services.metadata.MetadataService;
-import com.kdgregory.example.javalambda.shared.services.metadata.PhotoMetadata;
-import com.kdgregory.example.javalambda.shared.services.metadata.Sizes;
+import com.kdgregory.example.javalambda.shared.data.Fields;
+import com.kdgregory.example.javalambda.shared.data.PhotoMetadata;
+import com.kdgregory.example.javalambda.shared.data.Sizes;
+import com.kdgregory.example.javalambda.shared.services.ContentService;
+import com.kdgregory.example.javalambda.shared.services.MetadataService;
+import com.kdgregory.example.javalambda.shared.services.impl.ContentServiceImpl;
+import com.kdgregory.example.javalambda.shared.services.impl.MetadataServiceImpl;
 import com.kdgregory.example.javalambda.webapp.util.Request;
 import com.kdgregory.example.javalambda.webapp.util.Response;
 import com.kdgregory.example.javalambda.webapp.util.ResponseCodes;
@@ -55,9 +57,9 @@ public class PhotoService
 
     public PhotoService()
     {
-        metadataService = new MetadataService(
+        metadataService = new MetadataServiceImpl(
                             Environment.getOrThrow(Environment.DYNAMO_TABLE));
-        contentService = new ContentService(
+        contentService = new ContentServiceImpl(
                             Environment.getOrThrow(Environment.S3_IMAGE_BUCKET),
                             "");
     }

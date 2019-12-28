@@ -1,5 +1,5 @@
 // Copyright (c) Keith D Gregory, all rights reserved
-package com.kdgregory.example.javalambda.shared.services.metadata;
+package com.kdgregory.example.javalambda.shared.services.impl;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -15,11 +15,15 @@ import com.amazonaws.services.dynamodbv2.document.Index;
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.Table;
 
+import com.kdgregory.example.javalambda.shared.data.Fields;
+import com.kdgregory.example.javalambda.shared.data.PhotoMetadata;
+import com.kdgregory.example.javalambda.shared.services.MetadataService;
+
 
 /**
  *  This service supports retrieval and update of photo metadata.
  */
-public class MetadataService
+public class MetadataServiceImpl implements MetadataService
 {
     private Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -28,7 +32,7 @@ public class MetadataService
     private Index photoIndex;
 
 
-    public MetadataService(String ddbTableName)
+    public MetadataServiceImpl(String ddbTableName)
     {
         AmazonDynamoDB lowLevelClient = AmazonDynamoDBClientBuilder.defaultClient();
         ddbClient = new DynamoDB(lowLevelClient);
@@ -38,7 +42,7 @@ public class MetadataService
 
 
 //----------------------------------------------------------------------------
-//  Public methods
+//  Implementation of MetadataService
 //----------------------------------------------------------------------------
 
 
@@ -47,6 +51,7 @@ public class MetadataService
      *
      *  @return flag indicating whether or not the metadata could be stored.
      */
+    @Override
     public boolean store(PhotoMetadata metadata)
     {
         logger.debug("storing metadata for user {}, photo {}", metadata.getUser(), metadata.getId());
@@ -64,6 +69,7 @@ public class MetadataService
     /**
      *  Retrieves a photo by its ID. Returns null if unable to find the photo.
      */
+    @Override
     public PhotoMetadata retrieve(String photoId)
     {
         logger.debug("retrieving metadata for photo {}", photoId);
@@ -82,6 +88,7 @@ public class MetadataService
     /**
      *  Retrieves all photos for a given user.
      */
+    @Override
     public List<PhotoMetadata> retrieveByUser(String username)
     {
         logger.debug("retrieving metadata for all photos belonging to user {}", username);
@@ -99,6 +106,7 @@ public class MetadataService
      *  Deletes the metadata for the specified photo, if it exists. This is intended
      *  primarily to support the integration tests.
      */
+    @Override
     public void delete(String photoId)
     {
         logger.debug("deleting metadata for photo {}", photoId);

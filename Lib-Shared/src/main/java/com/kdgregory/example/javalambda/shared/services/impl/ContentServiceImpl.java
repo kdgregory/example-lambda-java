@@ -1,5 +1,5 @@
 // Copyright (c) Keith D Gregory, all rights reserved
-package com.kdgregory.example.javalambda.shared.services.content;
+package com.kdgregory.example.javalambda.shared.services.impl;
 
 import java.io.ByteArrayInputStream;
 
@@ -12,13 +12,14 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.*;
 
-import com.kdgregory.example.javalambda.shared.services.metadata.Sizes;
+import com.kdgregory.example.javalambda.shared.data.Sizes;
+import com.kdgregory.example.javalambda.shared.services.ContentService;
 
 
 /**
  *  This class supports management of a photo's content.
  */
-public class ContentService
+public class ContentServiceImpl implements ContentService
 {
     private Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -27,7 +28,7 @@ public class ContentService
     private String imageBucket;
 
 
-    public ContentService(AmazonS3 s3Client, String uploadBucket, String imageBucket)
+    public ContentServiceImpl(AmazonS3 s3Client, String uploadBucket, String imageBucket)
     {
         this.s3Client = s3Client;
         this.uploadBucket = uploadBucket;
@@ -35,19 +36,20 @@ public class ContentService
     }
 
 
-    public ContentService(String uploadBucket, String imageBucket)
+    public ContentServiceImpl(String uploadBucket, String imageBucket)
     {
         this(AmazonS3ClientBuilder.defaultClient(), uploadBucket, imageBucket);
     }
 
 
 //----------------------------------------------------------------------------
-//  Public methods
+//  Implementation of ContentService
 //----------------------------------------------------------------------------
 
     /**
      *  Stores the content for a photo at a given size.
      */
+    @Override
     public void store(String photoId, String mimeType, Sizes size, byte[] content)
     {
         logger.debug("uploading: photo {}, size = {}, content-length = {}",
@@ -69,6 +71,7 @@ public class ContentService
     /**
      *  Retrieves the content for a photo at a given size, null if unable to find the photo.
      */
+    @Override
     public byte[] retrieve(String photoId, Sizes size)
     {
         logger.debug("retrieving content for photo {}, size {}", photoId, size);
@@ -115,6 +118,7 @@ public class ContentService
      *  Moves an uploaded photo from the upload bucket to the image bucket, storing
      *  it as "ORIGINAL" size.
      */
+    @Override
     public void moveUploadToImageBucket(String photoId)
     {
         String destname = photoId + "/" + Sizes.ORIGINAL.name();

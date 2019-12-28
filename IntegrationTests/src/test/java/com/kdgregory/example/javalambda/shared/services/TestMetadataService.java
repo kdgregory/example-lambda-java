@@ -11,9 +11,9 @@ import static org.junit.Assert.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.kdgregory.example.javalambda.shared.services.metadata.MetadataService;
-import com.kdgregory.example.javalambda.shared.services.metadata.PhotoMetadata;
-import com.kdgregory.example.javalambda.shared.services.metadata.Sizes;
+import com.kdgregory.example.javalambda.shared.data.PhotoMetadata;
+import com.kdgregory.example.javalambda.shared.data.Sizes;
+import com.kdgregory.example.javalambda.shared.services.impl.MetadataServiceImpl;
 
 
 /**
@@ -31,7 +31,7 @@ public class TestMetadataService
     @Test
     public void testBasicOperation() throws Exception
     {
-        MetadataService service = new MetadataService(DATABASE_NAME);
+        MetadataService service = new MetadataServiceImpl(DATABASE_NAME);
 
         final String photoId = UUID.randomUUID().toString();
         final String username = "" + System.currentTimeMillis() + "@example.com";
