@@ -26,6 +26,24 @@ import com.amazonaws.services.dynamodbv2.document.Item;
  */
 public class PhotoMetadata
 {
+    /**
+     *  Identifies all of the metadata fields. This is used both for Dynamo attribute
+     *  names and client interaction.
+     */
+    public class Fields
+    {
+        public final static String  ID          = "id";
+        public final static String  USERNAME    = "username";
+        public final static String  FILENAME    = "filename";
+        public final static String  DESCRIPTION = "description";
+        public final static String  MIMETYPE    = "mimetype";
+        public final static String  UPLOADED_AT = "uploadedAt";
+        public final static String  SIZES       = "sizes";
+    }
+
+//----------------------------------------------------------------------------
+//  Instance
+//----------------------------------------------------------------------------
 
     private String id;
     private String user;

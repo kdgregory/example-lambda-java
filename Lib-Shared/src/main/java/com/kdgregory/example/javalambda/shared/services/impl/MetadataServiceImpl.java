@@ -15,8 +15,8 @@ import com.amazonaws.services.dynamodbv2.document.Index;
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.Table;
 
-import com.kdgregory.example.javalambda.shared.data.Fields;
 import com.kdgregory.example.javalambda.shared.data.PhotoMetadata;
+import com.kdgregory.example.javalambda.shared.data.PhotoMetadata.Fields;
 import com.kdgregory.example.javalambda.shared.services.MetadataService;
 
 

@@ -13,8 +13,8 @@ import com.amazonaws.services.dynamodbv2.document.Item;
 
 import static net.sf.kdgcommons.test.NumericAsserts.*;
 
-import com.kdgregory.example.javalambda.shared.data.Fields;
 import com.kdgregory.example.javalambda.shared.data.PhotoMetadata;
+import com.kdgregory.example.javalambda.shared.data.PhotoMetadata.Fields;
 import com.kdgregory.example.javalambda.shared.data.Sizes;
 
 import org.junit.Test;

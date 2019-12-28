@@ -14,8 +14,8 @@ import net.sf.kdgcommons.codec.Base64Codec;
 import net.sf.kdgcommons.lang.StringUtil;
 
 import com.kdgregory.example.javalambda.shared.config.Environment;
-import com.kdgregory.example.javalambda.shared.data.Fields;
 import com.kdgregory.example.javalambda.shared.data.PhotoMetadata;
+import com.kdgregory.example.javalambda.shared.data.PhotoMetadata.Fields;
 import com.kdgregory.example.javalambda.shared.data.Sizes;
 import com.kdgregory.example.javalambda.shared.services.ContentService;
 import com.kdgregory.example.javalambda.shared.services.MetadataService;
