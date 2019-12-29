@@ -28,6 +28,7 @@ import org.slf4j.MDC;
 
 import net.sf.kdgcommons.collections.CollectionUtil;
 import net.sf.kdgcommons.lang.ObjectUtil;
+import net.sf.kdgcommons.lang.StringUtil;
 
 
 
@@ -63,7 +64,7 @@ public class Dispatcher
         }
         catch (IllegalArgumentException ex)
         {
-            logger.warn("invalid client request", ex.getMessage());
+            logger.warn("invalid client request: {}", ex.getMessage());
             return buildResponseMap(new Response(400));
         }
         catch (UnhandledServiceException ignored)
@@ -110,7 +111,8 @@ public class Dispatcher
         String action = actionMatch.group(1);
 
         // body will be empty on GET, but rather than have separate code paths I'll give a dummy value
-        body = ObjectUtil.defaultValue(body, "{}");
+        // TODO - add defaultIfEmpty() to KDGCommons
+        if (StringUtil.isEmpty(body)) body = "{}";
 
         try
         {
