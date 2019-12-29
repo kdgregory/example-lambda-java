@@ -94,7 +94,6 @@ public class PhotoMetadata
      */
     public static PhotoMetadata fromDynamoItem(Item item)
     {
-
         return new PhotoMetadata(
             item.getString(Fields.ID),
             item.getString(Fields.USERNAME),
@@ -182,16 +181,25 @@ public class PhotoMetadata
      */
     public Item toDynamoItem()
     {
-        Set<String> sizeStrings = sizes.stream().map(Sizes::name)
-                                  .collect(Collectors.toSet());
-        return new Item()
-               .withString(Fields.ID,           id)
-               .withString(Fields.USERNAME,     user)
-               .withString(Fields.FILENAME,     filename)
-               .withString(Fields.MIMETYPE,     mimetype)
-               .withString(Fields.DESCRIPTION,  description)
-               .withLong(Fields.UPLOADED_AT,    uploadedAt)
-               .withStringSet(Fields.SIZES,     sizeStrings);
+        Item item = new Item()
+                   .withString(Fields.ID,           id)
+                   .withString(Fields.USERNAME,     user)
+                   .withString(Fields.FILENAME,     filename)
+                   .withString(Fields.MIMETYPE,     mimetype)
+                   .withLong(Fields.UPLOADED_AT,    uploadedAt);
+
+        if (! StringUtil.isBlank(description))
+        {
+            item.withString(Fields.DESCRIPTION, description);
+        }
+
+        Set<String> sizeStrings = sizes.stream().map(Sizes::name).collect(Collectors.toSet());
+        if (! sizeStrings.isEmpty())
+        {
+            item.withStringSet(Fields.SIZES, sizeStrings);
+        }
+
+        return item;
     }
 
 
@@ -215,7 +223,7 @@ public class PhotoMetadata
         return getClass().getSimpleName()
              + "[" + id + ": "
              + "username = " + user + ", "
-             + "filename = " + filename + " ,"
+             + "filename = " + filename + ", "
              + "mimetype = " + mimetype + ", "
              + "uploadedAt = " + uploadedAt + ", "
              + "sizes = " + sizes

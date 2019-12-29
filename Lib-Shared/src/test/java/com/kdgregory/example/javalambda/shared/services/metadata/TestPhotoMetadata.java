@@ -39,7 +39,6 @@ public class TestPhotoMetadata
         long now = System.currentTimeMillis();
 
         Map<String,Object> map = new HashMap<String,Object>();
-        map.put(Fields.ID,              TEST_ID);
         map.put(Fields.USERNAME,        TEST_USER);
         map.put(Fields.FILENAME,        TEST_FILE);
         map.put(Fields.MIMETYPE,        TEST_MIME);
@@ -59,6 +58,7 @@ public class TestPhotoMetadata
 
         assertTrue("valid", meta.isValid());
     }
+
 
     @Test
     public void testToClientMap() throws Exception
