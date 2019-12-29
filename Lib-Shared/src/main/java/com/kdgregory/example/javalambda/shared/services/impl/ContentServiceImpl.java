@@ -2,12 +2,15 @@
 package com.kdgregory.example.javalambda.shared.services.impl;
 
 import java.io.ByteArrayInputStream;
+import java.net.URL;
+import java.util.Date;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.sf.kdgcommons.io.IOUtil;
 
+import com.amazonaws.HttpMethod;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.*;
@@ -21,6 +24,8 @@ import com.kdgregory.example.javalambda.shared.services.ContentService;
  */
 public class ContentServiceImpl implements ContentService
 {
+    private final static long PRESIGNED_URL_EXPIRATION = 3600 * 1000;
+
     private Logger logger = LoggerFactory.getLogger(getClass());
 
     private AmazonS3 s3Client;
@@ -46,9 +51,6 @@ public class ContentServiceImpl implements ContentService
 //  Implementation of ContentService
 //----------------------------------------------------------------------------
 
-    /**
-     *  Stores the content for a photo at a given size.
-     */
     @Override
     public void store(String photoId, String mimeType, Sizes size, byte[] content)
     {
@@ -68,9 +70,6 @@ public class ContentServiceImpl implements ContentService
     }
 
 
-    /**
-     *  Retrieves the content for a photo at a given size, null if unable to find the photo.
-     */
     @Override
     public byte[] retrieve(String photoId, Sizes size)
     {
@@ -114,16 +113,23 @@ public class ContentServiceImpl implements ContentService
     }
 
 
-    /**
-     *  Moves an uploaded photo from the upload bucket to the image bucket, storing
-     *  it as "ORIGINAL" size.
-     */
+    @Override
+    public String createUploadURL(String filename)
+    {
+        Date expires = new Date(System.currentTimeMillis() + PRESIGNED_URL_EXPIRATION);
+        URL url = s3Client.generatePresignedUrl(uploadBucket, filename, expires, HttpMethod.PUT);
+        return url.toString();
+    }
+
+
     @Override
     public void moveUploadToImageBucket(String photoId)
     {
         String destname = photoId + "/" + Sizes.ORIGINAL.name();
+
         logger.debug("moving object s3://{}/{} to s3://{}/{}",
                      uploadBucket, photoId, imageBucket, destname);
+
         s3Client.copyObject(uploadBucket, photoId, imageBucket, destname);
         s3Client.deleteObject(uploadBucket, photoId);
     }

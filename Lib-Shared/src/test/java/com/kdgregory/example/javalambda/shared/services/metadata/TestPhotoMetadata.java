@@ -46,15 +46,13 @@ public class TestPhotoMetadata
 
         PhotoMetadata meta = PhotoMetadata.fromClientMap(map);
 
-        assertEquals(Fields.ID,           TEST_ID,                              meta.getId());
+        assertNotNull(Fields.ID,                                                meta.getId());
         assertEquals(Fields.USERNAME,     TEST_USER,                            meta.getUser());
         assertEquals(Fields.FILENAME,     TEST_FILE,                            meta.getFilename());
         assertEquals(Fields.MIMETYPE,     TEST_MIME,                            meta.getMimetype());
         assertEquals(Fields.DESCRIPTION,  TEST_DESC,                            meta.getDescription());
         assertInRange(Fields.UPLOADED_AT, now - 100, now + 100,                 meta.getUploadedAt().longValue());
         assertEquals(Fields.SIZES,        Collections.emptySet(),               meta.getSizes());
-
-
 
         assertTrue("valid", meta.isValid());
     }

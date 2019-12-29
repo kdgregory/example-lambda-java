@@ -22,6 +22,12 @@ public interface ContentService
 
 
     /**
+     *  Generates a signed URL that can be used for upload of a specified file.
+     */
+    public String createUploadURL(String filename);
+
+
+    /**
      *  Moves an uploaded photo from the upload bucket to the image bucket, storing
      *  it as "ORIGINAL" size.
      */

@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
 import net.sf.kdgcommons.collections.CollectionUtil;
-import net.sf.kdgcommons.lang.StringUtil;
+import net.sf.kdgcommons.lang.ObjectUtil;
 
 
 
@@ -42,7 +42,7 @@ public class Dispatcher
     private ObjectMapper mapper = new ObjectMapper();
     private UserService userService = new UserService();
     private PhotoService photoService = new PhotoService();
-    
+
     private Pattern actionRegex = Pattern.compile("/api/(.*)");
 
 
@@ -54,9 +54,7 @@ public class Dispatcher
     {
         MDC.clear();
         MDC.put("requestId", lambdaContext.getAwsRequestId());
-        
-        logger.info("request: {}", albRequest);
-        
+
         try
         {
             Request request = extractRequest(albRequest);
@@ -101,7 +99,9 @@ public class Dispatcher
         String path        = (String)CollectionUtil.getVia(albRequest, "path");
         String tokenHeader = (String)CollectionUtil.getVia(albRequest, "headers", "cookie");
         String body        = (String)CollectionUtil.getVia(albRequest, "body");
-        
+
+        logger.info("received {} {}", method, path);
+
         Matcher actionMatch = actionRegex.matcher(path);
         if (! actionMatch.matches())
         {
@@ -110,10 +110,7 @@ public class Dispatcher
         String action = actionMatch.group(1);
 
         // body will be empty on GET, but rather than have separate code paths I'll give a dummy value
-        if (StringUtil.isEmpty(body))
-        {
-            body = "{}";
-        }
+        body = ObjectUtil.defaultValue(body, "{}");
 
         try
         {
@@ -140,7 +137,6 @@ public class Dispatcher
      */
     private Response dispatch(Request request)
     {
-        logger.info("dispatching action: {} {}", request.getMethod(), request.getAction());
         switch (request.getAction())
         {
             case RequestActions.SIGNIN :
@@ -151,7 +147,7 @@ public class Dispatcher
                 return invokeIf(request, HttpMethod.POST, r -> userService.confirmSignUp(r));
             case RequestActions.LIST :
                 return invokeIf(request, HttpMethod.GET,  authorized(r -> photoService.listPhotos(r)));
-            case RequestActions.UPLOAD :
+            case RequestActions.REQUEST_UPLOAD :
                 return invokeIf(request, HttpMethod.POST, authorized(r -> photoService.upload(r)));
             default:
                 return new Response(404);
@@ -198,7 +194,7 @@ public class Dispatcher
     {
         Map<String,Object> responseMap = new HashMap<>();
         responseMap.put("statusCode", response.getStatusCode());
-        
+
         Map<String,String> headers = response.getTokens().createCookieHeaders();
         headers.put("Content-Type", "application/json");
         headers.put("Cache-Control", "no-cache");

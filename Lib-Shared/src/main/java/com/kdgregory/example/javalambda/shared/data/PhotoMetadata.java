@@ -8,6 +8,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import net.sf.kdgcommons.lang.ObjectUtil;
@@ -74,12 +75,13 @@ public class PhotoMetadata
 
     /**
      *  Constructs an instance using the map provided by a client upload. Note
-     *  that instance sizes are left empty.
+     *  that we insert fields, and that instance sizes are left empty (to be
+     *  filled by resizer).
      */
     public static PhotoMetadata fromClientMap(Map<String,Object> map)
     {
         return new PhotoMetadata(
-            (String)map.get(Fields.ID),
+            UUID.randomUUID().toString(),
             (String)map.get(Fields.USERNAME),
             (String)map.get(Fields.FILENAME),
             (String)map.get(Fields.MIMETYPE),

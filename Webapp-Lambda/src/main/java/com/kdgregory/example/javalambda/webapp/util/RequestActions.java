@@ -10,7 +10,7 @@ public class RequestActions
     // handled by PhotoService
 
     public final static String  LIST            = "list";
-    public final static String  UPLOAD          = "upload";
+    public final static String  REQUEST_UPLOAD  = "requestUpload";
 
     // handled by UserService
 
