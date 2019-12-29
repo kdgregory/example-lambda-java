@@ -133,3 +133,57 @@ where:
 
 This script will delete the stack and also all buckets that were created by the `deploy` script.
 If you _don't_ want to delete the buckets, delete the stack manually using the AWS Console.
+
+
+## Useful cURL Commands
+
+When you're changing the web-app service, it is easier if you separate changes to JavaScript
+from changes to the Lambda, then use `curl` to invoke the operation. Making this a bit more
+challenging is that you need a valid JWT token to be able to do anything. In the following
+examples, replace `ENDPOINT` with the address of your load balancer or CloudFront distribution.
+
+* Login
+
+  Additionally replace `USERNAME` and `PASSWORD` with valid entries. Note that the JWT tokens
+  are written to a file that will be readable by anyone. If you're concerned about that, use
+  a directory that doesn't permit world read or set your `umask` appropriately.
+
+  ```
+  curl -v 'https://ENDPOINT/api/signin' -c /tmp/cookies.dat -H 'Content-Type: application/json' --data '{"email":"USERNAME","password":"PASSWORD"}'
+  ```
+
+  The response should be `{"data":null,"description":"","responseCode":"SUCCESS"}`.
+
+  Note that it will take several seconds to start a new Lambda execution environment.
+
+* Request a file upload
+
+  Additionally replace `USERNAME`, `FILENAME, and `DESCRIPTION` with appropriate values.
+
+  ```
+  curl -v 'https://ENDPOINT/api/requestUpload' -b /tmp/cookies.dat -c /tmp/cookies.dat -H 'Content-Type: application/json' --data '{"username":"USERNAME","filename":"FILENAME","description":"DESCRIPTION","mimetype":"image/jpeg"}' > /tmp/$$
+  ```
+
+  The response will contain the signed URL as its `data` element. Since this URL is long,
+  and would become intermingled with the debugging output if sent to the console, it's
+  written to a file.
+
+  This is the general format for endpoint requests that require authentication; it uses
+  the cookie jar created in the prior step both to provide cookies and receive updated
+  cookies.
+
+  If you get an authentication error, verify that cookies are being sent: you should see
+  a `Cookie:` line in the log output. If you don't, sign in again and make sure that the
+  "cookie jar" (`/tmp/cookies.dat`) has been populated. If you do see a cookie, it's
+  possible that you still need to sign in again; otherwise, debug from Lambda logs.
+
+* Upload file content
+
+  Replace `FILENAME` with your source filename, and `SIGNED_URL` with the URL from the
+  previous step. Note that the URL has to be enclosed in single quotes to prevent the
+  shell from intepreting the numerous `&`s that appear within it. Note also that the
+  content type is limited to JPEG images.
+
+  ```
+  curl -v -XPUT --data-binary @FILENAME -H 'Content-Type: image/jpeg' 'SIGNED_URL'
+  ```
