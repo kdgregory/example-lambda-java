@@ -125,7 +125,7 @@ public class ContentServiceImpl implements ContentService
     @Override
     public void moveUploadToImageBucket(String photoId)
     {
-        String destname = photoId + "/" + Sizes.ORIGINAL.name();
+        String destname = s3Key(photoId, Sizes.ORIGINAL);
 
         logger.debug("moving object s3://{}/{} to s3://{}/{}",
                      uploadBucket, photoId, imageBucket, destname);
@@ -144,6 +144,6 @@ public class ContentServiceImpl implements ContentService
      */
     private String s3Key(String photoId, Sizes size)
     {
-        return photoId + "/" + size.name();
+        return "images/" + photoId + "/" + size.name();
     }
 }
