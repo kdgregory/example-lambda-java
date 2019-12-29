@@ -148,7 +148,7 @@ public class Dispatcher
             case RequestActions.LIST :
                 return invokeIf(request, HttpMethod.GET,  authorized(r -> photoService.listPhotos(r)));
             case RequestActions.REQUEST_UPLOAD :
-                return invokeIf(request, HttpMethod.POST, authorized(r -> photoService.upload(r)));
+                return invokeIf(request, HttpMethod.POST, authorized(r -> photoService.prepareUpload(r)));
             default:
                 return new Response(404);
         }
