@@ -181,6 +181,12 @@ Resources:
     Properties: 
       BucketName:                       !Ref UploadBucketName
       AccessControl:                    "Private"
+      CorsConfiguration:
+        CorsRules:
+          -
+            AllowedMethods:             ["PUT"]
+            AllowedOrigins:             [ "*" ]
+            AllowedHeaders:             [ "*" ]
       NotificationConfiguration:
         LambdaConfigurations:
           -
