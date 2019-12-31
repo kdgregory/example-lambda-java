@@ -9,7 +9,7 @@ component("upload", {
             self.fileName = "";
             self.fileSize = null;
             self.fileType = null;
-            self.fileDataUrl = null;
+            self.fileData = null;
             self.description = "";
 
             // apparently Angular won't bind to the file-chooser, so we'll add
@@ -27,10 +27,10 @@ component("upload", {
 
                 var reader = new FileReader();
                 reader.onload = function(evt) {
-                    self.fileDataUrl = reader.result;
+                    self.fileData = new Uint8Array(reader.result);
                     $scope.$apply();
                 }
-                reader.readAsDataURL(file);
+                reader.readAsArrayBuffer(file);
             };
 
 
@@ -40,24 +40,35 @@ component("upload", {
 
 
             self.canDoUpload = function() {
-                return self.fileDataUrl != null;
+                return self.fileData != null;
             }
 
 
             self.doUpload = function () {
-                console.log("doUpload called");
-                $http.post('api/upload', {
+                console.log("doUpload: starting");
+
+                // this is a chain of async actions
+                // happening, which would mean that the buffer would be associated with
+                self.doUpload1(self.fileData)
+
+                // disable upload button while in process of upload
+                self.fileData = null;
+                $scope.$apply();
+            }
+
+
+            self.doUpload1 = function (fileData) {
+                console.log("doUpload: requesting upload URL");
+                $http.post('api/requestUpload', {
                     "filename":     self.fileName,
-                    "filesize":     self.fileSize,
                     "mimetype":     self.fileType,
-                    "description":  self.description,
-                    "content":      self.fileDataUrl.replace(/^data.*,/, "")
+                    "description":  self.description
                 })
                 .then(
                     function(response) {
                         if (response.data.responseCode === "SUCCESS") {
-                            console.log("got success");
-                            $location.path("/main");
+                            console.log("doUpload: successfully retrieved URL");
+                            self.doUpload2(response.data.data, fileData)
                         }
                         else if (response.data.responseCode === "NOT_AUTHENTICATED") {
                             console.log("must authenticate");
@@ -70,10 +81,26 @@ component("upload", {
                     function(reason) {
                         alert("upload failed: " + reason);
                     });
+            }
 
-                // disable upload button while in process of upload
-                self.fileDataUrl = null;
-                $scope.$apply();
+
+            self.doUpload2 = function(uploadUrl, fileData) {
+                console.log("doUpload: uploading file");
+                console.log("data size: " + fileData.byteLength)
+                $http.put(uploadUrl, fileData, {
+                    transformRequest: [],
+                    headers: {
+                        "Content-Type": self.fileType
+                    }
+                })
+                .then(
+                    function(response) {
+                        console.log("doUpload: successfully uploaded file");
+                        $location.path("/main");
+                    },
+                    function(reason) {
+                        alert("upload failed: " + reason);
+                    });
             }
         }
     ]
