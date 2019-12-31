@@ -3,15 +3,12 @@
 #
 # Deploys the demo app
 #
-#   Scripts/deploy.sh BASENAME BASE_BUCKETNAME VPC_ID PUBLIC_SUBNETS
+#   scripts/deploy.sh BASENAME BASE_BUCKETNAME VPC_ID PUBLIC_SUBNETS
 #
-# This will build the Lambdas, create four buckets for the demo app (deployment, logging, static
-# content, and # image content), copy the relevant content into those buckets, and launch a
-# CloudFormation stack to build out the rest of the deployment.
+# This will build the Lambdas, create the application buckets, copy the relevant content into
+# those buckets, and launch a CloudFormation stack to build out the rest of the deployment.
 #
-# To run, you must have standard shell programs. You must also have your environment configured
-# for AWS, including AWS_REGION defined. And lastly, you must run from within the project root
-# directory.
+# To run, you must have your credentials and region configured.
 #
 ################################################################################################
 
@@ -35,9 +32,6 @@ mvn clean install
 echo ""
 echo "creating static and deployment buckets"
 
-# note: if you try to re-create a bucket it will silently fail
-#       ... this is a Good Thing
-
 aws s3 mb s3://$DEPLOYMENT_BUCKET
 aws s3 mb s3://$STATIC_BUCKET
 
@@ -46,15 +40,15 @@ aws s3 mb s3://$STATIC_BUCKET
 echo ""
 echo "uploading deployment bundles and static content"
 
-WEBAPP_PATH=(Webapp-Lambda/target/webapp-lambda-*.jar)
+WEBAPP_PATH=(webapp-lambda/target/webapp-lambda-*.jar)
 WEBAPP_FILE=$(basename "${WEBAPP_PATH}")
 aws s3 cp ${WEBAPP_PATH} s3://${DEPLOYMENT_BUCKET}/${WEBAPP_FILE}
 
-RESIZER_PATH=(Resizer-Lambda/target/resizer-lambda-*.jar)
+RESIZER_PATH=(resizer-lambda/target/resizer-lambda-*.jar)
 RESIZER_FILE=$(basename "${RESIZER_PATH}")
 aws s3 cp ${RESIZER_PATH} s3://${DEPLOYMENT_BUCKET}/${RESIZER_FILE}
 
-pushd Webapp-Static
+pushd webapp-static
 aws s3 cp . s3://${STATIC_BUCKET}/ --recursive
 popd
 
@@ -111,6 +105,6 @@ EOF
 
 aws cloudformation create-stack \
                    --stack-name ${BASENAME} \
-                   --template-body file://Scripts/cloudformation.yml \
+                   --template-body file://scripts/cloudformation.yml \
                    --capabilities CAPABILITY_NAMED_IAM \
                    --parameters "$(< /tmp/cfparams.json)"

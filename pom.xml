@@ -15,9 +15,9 @@
 
 
     <modules>
-        <module>Lib-Shared</module>
-        <module>Webapp-Lambda</module>
-        <module>Resizer-Lambda</module>
+        <module>lib-shared</module>
+        <module>webapp-lambda</module>
+        <module>resizer-lambda</module>
     </modules>
 
 

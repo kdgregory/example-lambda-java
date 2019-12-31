@@ -8,14 +8,13 @@
         <version>2.0.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>integration-tests</artifactId>
+    <artifactId>lib-shared-integrationtests</artifactId>
     <packaging>jar</packaging>
 
-    <name>Integration Tests</name>
+    <name>Shared Library Integration Tests</name>
 
     <description>
-        These tests are intended to be run manually, to verify
-        the shared services.
+        These tests are intended to be run manually, to verify the shared services.
     </description>
 
 

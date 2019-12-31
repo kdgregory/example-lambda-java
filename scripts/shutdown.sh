@@ -3,7 +3,7 @@
 #
 # Terminates the demo app, deleting all resources that were created by deploy.sh
 #
-#   Scripts/shutdown.sh STACK_ID
+#   scripts/shutdown.sh STACK_ID
 #
 ################################################################################################
 

@@ -14,7 +14,7 @@
     <name>Java-Lambda Resizer</name>
 
     <description>
-        A background lambda function that responds to new image uploads by resizing them
+        A background lambda function that responds to new image uploads by resizing them.
     </description>
 
 
