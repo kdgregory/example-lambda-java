@@ -177,7 +177,7 @@ Resources:
 
   UploadBucket:
     Type:                               "AWS::S3::Bucket"
-    DependsOn:                          [ ResizerLambdaFunction ]
+    DependsOn:                          [ ResizerInvocationPermission ]
     Properties: 
       BucketName:                       !Ref UploadBucketName
       AccessControl:                    "Private"
@@ -343,11 +343,13 @@ Resources:
 
   ResizerInvocationPermission:
     Type:                               "AWS::Lambda::Permission"
+    DependsOn:                          [ ResizerLambdaFunction ]
     Properties:
       Action:                           "lambda:InvokeFunction"
       FunctionName:                     !GetAtt ResizerLambdaFunction.Arn
       Principal:                        "s3.amazonaws.com"
-      SourceArn:                        !GetAtt UploadBucket.Arn
+      SourceAccount:                    !Ref AWS::AccountId
+      SourceArn:                        !Sub "arn:aws:s3:::${UploadBucketName}"
 
   ##
   ## WebApp Lambda
