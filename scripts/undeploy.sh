@@ -1,9 +1,9 @@
 #!/bin/bash
 ################################################################################################
 #
-# Terminates the demo app, deleting all resources that were created by deploy.sh
+# Undeploys the demo app, deleting all resources that were created by deploy.sh
 #
-#   scripts/shutdown.sh STACK_ID
+#   scripts/undeploy.sh STACK_ID
 #
 ################################################################################################
 

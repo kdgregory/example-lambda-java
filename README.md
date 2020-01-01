@@ -124,7 +124,7 @@ It takes around 20 minutes to build the stack, largely due to the CloudFront dis
 every day that you leave this stack running. To avoid this cost, you can run the shutdown script:
 
 ```
-Scripts/shutdown.sh STACK_ID
+Scripts/undeploy.sh STACK_ID
 ```
 
 where:
