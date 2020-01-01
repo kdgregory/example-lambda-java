@@ -1,7 +1,6 @@
 // Copyright (c) Keith D Gregory, all rights reserved
 package com.kdgregory.example.javalambda.resizer;
 
-
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;

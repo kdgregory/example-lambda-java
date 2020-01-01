@@ -90,7 +90,7 @@ public class TestContentService
         }
 
         photoId = UUID.randomUUID().toString();
-        objectKey =  photoId + "/" + Sizes.ORIGINAL.name();
+        objectKey =  "images/" + photoId + "/" + Sizes.ORIGINAL.name();
     }
 
 
@@ -138,20 +138,19 @@ public class TestContentService
         logger.info("testRetrieveNonexistentPhoto");
         assertNull(service.retrieve(photoId, Sizes.ORIGINAL));
     }
-    
-    
+
+
     @Test
-    public void testCreateUploadURL() throws Exception 
+    public void testCreateUploadURL() throws Exception
     {
         logger.info("testCreateUploadURL");
-        
+
         String url = service.createUploadURL(photoId);
         assertNotNull("returned URL", url);
-        
+
         logger.debug("testCreateUploadURL: generated URL = {}", url);
-        
+
     }
-    
 
 
     @Test

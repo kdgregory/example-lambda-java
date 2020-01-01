@@ -1,6 +1,7 @@
 // Copyright (c) Keith D Gregory, all rights reserved
 package com.kdgregory.example.javalambda.webapp.util;
 
+
 /**
  *  All response codes and their descriptions. Note that codes may not
  *  be applicable to different functions.
@@ -18,7 +19,9 @@ public enum ResponseCodes
     USER_ALREADY_EXISTS     ("A user with this email address already exists"),
     INVALID_PASSWORD        ("Password does not meeet validation requirements (mix of numbers, upper and lower case letters)");
 
+
     private String description;
+
 
     private ResponseCodes(String description)
     {

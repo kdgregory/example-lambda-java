@@ -13,46 +13,46 @@ public enum Sizes
     ORIGINAL    (  -1,  -1,     "original"),
     THUMB       ( 180,  180,    "thumbnail"),
     W1024H768   (1024,  768,    "1024 x 768"),
-    W640H480    ( 640,  480,    "640 x 480"); 
-    
-    
+    W640H480    ( 640,  480,    "640 x 480");
+
+
 //----------------------------------------------------------------------------
 //  Attribbutes and constructors
 //----------------------------------------------------------------------------
-    
+
     private int width;
     private int height;
     private String description;
-    
+
     private Sizes(int width, int height, String description)
     {
         this.width = width;
         this.height = height;
         this.description = description;
     }
-    
-    
+
+
     public int getWidth()
     {
         return width;
     }
-    
-    
+
+
     public int getHeight()
     {
         return height;
     }
-    
-    
+
+
     public String getDescription()
     {
         return description;
     }
-    
+
 //----------------------------------------------------------------------------
 //  Useful methods
 //----------------------------------------------------------------------------
-    
+
     /**
      *  Transforms this enum into a map of values for sending to client.
      */

@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
 import net.sf.kdgcommons.collections.CollectionUtil;
-import net.sf.kdgcommons.lang.ObjectUtil;
 import net.sf.kdgcommons.lang.StringUtil;
 
 
