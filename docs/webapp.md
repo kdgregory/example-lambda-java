@@ -70,20 +70,18 @@ such as AWS service clients.
 
 At this point it's a good idea to review the rules of instance variables in Lambda:
 
-* Lambda functions are permitted to use instance variables, and _should_ use instance variables for
-  long-lived or expensive-to-produce objects.
+* Lambda functions are permitted to use instance variables, and _should_ use instance variables
+  for long-lived or expensive-to-produce objects.
 * Any given Lambda invocation may or may not re-use an existing container. As a result, it has to
-  be prepared to initialize or re-initialize variables as needed (here, the constructor does this).
+  be prepared to initialize or re-initialize variables as needed (in my case, the constructor does
+  this).
 * Instance variables must _not_ be used to retain client state across invocations, because there's
-  requests from the same client may go to different containers.
+  no guarantee that the same container will be reused for a client.
 * Anything assigned to an instance variable must not rely on its finalizer being run; it should
   assume that the container shuts down with a hard kill.
-* While the available documentation strongly hints that each concurrent Lambda function will be
-  invoked in a separate container, _at no point does it clearly state this_. The best you get 
-  is in the [FAQ](https://aws.amazon.com/lambda/faqs/), which states that "Each AWS Lambda function
-  runs in its own isolated environment" but then goes on to compare those environments to EC2.
-  As a result, I recommend that you _maintain normal thread-safety practices_ for the instance
-  variables of Lambda functions.
+* Each Lambda execution environment handles one request at a time. There's no need to synchronize
+  variable access unless you create your own threads (and that's generally a 
+  [bad idea](https://blog.kdgregory.com/2019/01/multi-threaded-programming-with-aws.html)).
 
 
 ### Authentication / Authorization
@@ -101,16 +99,16 @@ the pool, and my default configuration is 7 days.
 > JSON Web Tokens have received a lot of unfavorable comment, largely as a result of poor
   implementation. I believe that as long as you (1) use RSA-based signatures and keep the
   secret key secret (which Amazon does), and (2) use a library that checks the algorithm
-  and not just the signature (which I believe jose4j does), then you'll be OK.
+  and not just the signature (which `jose4j does), then you'll be OK.
 
 The tokens are passed to the client using HTTP-only cookies (so they're not accessible to
 code running on the page). Cookie management is a minor headache with Lambda: you have to
 parse and produce a single `Cookies` header, and there isn't (as-of my implementation) a
-library to do this for you. Take a look at the [Tokens](../Webapp-Lambda/src/main/java/com/kdgregory/example/javalambda/webapp/util/Tokens.java)
+library to do this for you. Take a look at the [Tokens](../webapp-lambda/src/main/java/com/kdgregory/example/javalambda/webapp/util/Tokens.java)
 class to see how I did it.
 
-Beware that the application does _not_ attempt to prevent cross-site request forgery
+Beware that this application does _not_ attempt to prevent cross-site request forgery
 ([CSRF](https://en.wikipedia.org/wiki/Cross-site_request_forgery)); if malicious code
-can get access to the user's access and refresh tokens, it can access the user's photos.
+can get access to the user's access and refresh tokens, it can upload new photos.
 Adding such protection would require changing the services to produce and expect an
-additional token, delivered in the request body.
+additional token, delivered in the request body. 
