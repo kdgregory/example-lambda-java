@@ -587,71 +587,76 @@ Resources:
             ViewerProtocolPolicy:       "redirect-to-https"
             TargetOriginId:             "API"
             AllowedMethods:             [ "GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE" ]
-            CachedMethods:              [ "GET", "HEAD" ]   # would be nice to have "none"
             ForwardedValues: 
               Cookies: 
                 Forward:                "all"
               QueryString:              true
-            Compress:                   false               # wouldn't buy much
-            DefaultTTL:                 0                   # in case we don't have cache-control headers
+            Compress:                   true
+            MinTTL:                     0
+            MaxTTL:                     0
+            DefaultTTL:                 0
           -
             PathPattern:                "/images/*"
-            ViewerProtocolPolicy:       "redirect-to-https"
+            ViewerProtocolPolicy:       "allow-all"             # images may be used on a non-HTTP site
             TargetOriginId:             "Images"
             AllowedMethods:             [ "GET", "HEAD" ]
-            CachedMethods:              [ "GET", "HEAD" ]
             ForwardedValues: 
               QueryString:              false
-            Compress:                   false
+            Compress:                   false                   # images should already be compressed
+            MinTTL:                     0
+            MaxTTL:                     !Ref CloudFrontAssetTTL
             DefaultTTL:                 !Ref CloudFrontAssetTTL
           -
             PathPattern:                "index.html"
             ViewerProtocolPolicy:       "redirect-to-https"
             TargetOriginId:             "StaticContent"
             AllowedMethods:             [ "GET", "HEAD" ]
-            CachedMethods:              [ "GET", "HEAD" ]
             ForwardedValues: 
               QueryString:              false
             Compress:                   true
+            MinTTL:                     0
+            MaxTTL:                     !Ref CloudFrontAssetTTL
             DefaultTTL:                 !Ref CloudFrontAssetTTL
           -
             PathPattern:                "/templates/*"
-            ViewerProtocolPolicy:       "redirect-to-https"
+            ViewerProtocolPolicy:       "https-only"            # should only be HTTP if not from our page
             TargetOriginId:             "StaticContent"
             AllowedMethods:             [ "GET", "HEAD" ]
-            CachedMethods:              [ "GET", "HEAD" ]
             ForwardedValues: 
               QueryString:              false
             Compress:                   true
+            MinTTL:                     0
+            MaxTTL:                     !Ref CloudFrontAssetTTL
             DefaultTTL:                 !Ref CloudFrontAssetTTL
           -
             PathPattern:                "/css/*"
-            ViewerProtocolPolicy:       "redirect-to-https"
+            ViewerProtocolPolicy:       "https-only"            # should only be HTTP if not from our page
             TargetOriginId:             "StaticContent"
             AllowedMethods:             [ "GET", "HEAD" ]
-            CachedMethods:              [ "GET", "HEAD" ]
             ForwardedValues: 
               QueryString:              false
             Compress:                   true
+            MinTTL:                     0
+            MaxTTL:                     !Ref CloudFrontAssetTTL
             DefaultTTL:                 !Ref CloudFrontAssetTTL
           -
             PathPattern:                "/js/*"
-            ViewerProtocolPolicy:       "redirect-to-https"
+            ViewerProtocolPolicy:       "https-only"            # should only be HTTP if not from our page
             TargetOriginId:             "StaticContent"
             AllowedMethods:             [ "GET", "HEAD" ]
-            CachedMethods:              [ "GET", "HEAD" ]
             ForwardedValues: 
               QueryString:              false
             Compress:                   true
+            MinTTL:                     0
+            MaxTTL:                     !Ref CloudFrontAssetTTL
             DefaultTTL:                 !Ref CloudFrontAssetTTL
         DefaultCacheBehavior:
             ViewerProtocolPolicy:       "redirect-to-https"
             TargetOriginId:             "BlackHole"
             AllowedMethods:             [ "GET", "HEAD" ]
-            CachedMethods:              [ "GET", "HEAD" ]
             ForwardedValues: 
               QueryString:              false
             Compress:                   false
+            MinTTL:                     0
+            MaxTTL:                     !Ref CloudFrontAssetTTL
             DefaultTTL:                 !Ref CloudFrontAssetTTL
-            ForwardedValues: 
-              QueryString:              false
