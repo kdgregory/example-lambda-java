@@ -15,6 +15,20 @@ Parameters:
     Description:                        "The list of public subnets where load balancer endpoints will live"
     Type:                               "List<AWS::EC2::Subnet::Id>"
 
+  DNSDomain:
+    Description:                        "Used with Hostname to construct a domain-specific CNAME for the site (optional)"
+    Type:                               "String"
+    Default:                            ""
+
+  Hostname:
+    Description:                        "Used with DNSDomain to construct a domain-specific CNAME for the site (optional)"
+    Type:                               "String"
+    Default:                            ""
+
+  ACMCertificateArn:
+    Description:                        "An ACM certificate ID (optional, required to use a custom DNS name)"
+    Type:                               "String"
+
   DeploymentBucketName:
     Description:                        "Name of the bucket where the Lambda deployment bundles live"
     Type:                               "String"
@@ -47,6 +61,14 @@ Parameters:
     Description:                        "The default time-to-live, in seconds, for static assets served through CloudFront (change to 0 for development)"
     Type:                               "Number"
     Default:                            86400
+
+
+Conditions:
+  EnableCustomDomain:                   !And 
+                                        - !Not [ !Equals [ !Ref Hostname, "" ]]
+                                        - !Not [ !Equals [ !Ref DNSDomain, "" ]]
+                                        - !Not [ !Equals [ !Ref ACMCertificateArn, "" ]]
+
 
 Resources:
 
@@ -549,6 +571,16 @@ Resources:
       CloudFrontOriginAccessIdentityConfig: 
         Comment:                        !Sub "Origin identity for ${BaseName} deployment"
 
+  CloudFrontHostname:
+    Type:                               "AWS::Route53::RecordSet"
+    Condition:                          EnableCustomDomain
+    Properties:
+      Name:                             !Sub "${Hostname}.${DNSDomain}"
+      Type:                             "CNAME"
+      HostedZoneName:                   !Sub "${DNSDomain}."
+      TTL:                              "60"
+      ResourceRecords:                  [ !GetAtt CloudFront.DomainName ]
+
 
   CloudFront:
     Type:                               "AWS::CloudFront::Distribution"
@@ -557,6 +589,17 @@ Resources:
         Comment:                        !Sub "${BaseName} deployment"
         Enabled:                        true
         DefaultRootObject:              "index.html"
+        Aliases:                        !If
+                                        - EnableCustomDomain
+                                        - [ !Sub "${Hostname}.${DNSDomain}" ]
+                                        - !Ref AWS::NoValue
+        ViewerCertificate:              !If
+                                        - EnableCustomDomain
+                                        -
+                                          AcmCertificateArn:        !Ref ACMCertificateArn
+                                          MinimumProtocolVersion:   "TLSv1.2_2018"
+                                          SslSupportMethod:         "sni-only"
+                                        - !Ref AWS::NoValue
         Origins: 
           -
             Id:                         "StaticContent"
