@@ -73,7 +73,7 @@ the Resizer Lambda, which transforms the image and updates stored metadata.
 To build and deploy, run this script (you must have an AWS profile configured):
 
 ```
-scripts/deploy.sh BASENAME BASE_BUCKETNAME VPC_ID PUBLIC_SUBNETS [DNS_DOMAIN HOSTNAME ACM_CERT_ARN]
+scripts/build_and_deploy.sh BASENAME BASE_BUCKETNAME VPC_ID PUBLIC_SUBNETS [DNS_DOMAIN HOSTNAME ACM_CERT_ARN]
 ```
 
 where:
