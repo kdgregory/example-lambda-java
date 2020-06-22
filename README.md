@@ -90,16 +90,17 @@ where:
 
 When you run the script, it first builds the project, then creates the buckets and copies the
 deployment bundles and static content into them; you'll see various messages as this happens.
-The last thing that it does is start building the CloudFormation stack; you'll see a message
+Then it starts building the CloudFormation stack; the last two messages you see should look
 like the following:
 
 ```
-{
-    "StackId": "arn:aws:cloudformation:us-east-1:999999999999:stack/Example/a0ccd440-3a37-11e7-89ed-50d5ca6e60e6"
-}
+creating CloudFormation stack
+waiting on stack: arn:aws:cloudformation:us-east-1:012345678901:stack/JavaLambda/a5c99920-ba81-11aa-8229-0e8302531d14
 ```
 
 It will take 20-30 minutes to build the stack, largely due to the CloudFront distribution.
+The script will wait until the stack is completed; interrupting the script does _not_
+interrupt stack creation.
 
 
 ## Shutting Down

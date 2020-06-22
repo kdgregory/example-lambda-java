@@ -147,8 +147,13 @@ cat > /tmp/cfparams.json <<EOF
 ]
 EOF
 
-aws cloudformation create-stack \
-                   --stack-name ${BASENAME} \
-                   --template-body file://scripts/cloudformation.yml \
-                   --capabilities CAPABILITY_NAMED_IAM \
-                   --parameters "$(< /tmp/cfparams.json)"
+STACK_ID=$(aws cloudformation create-stack \
+               --stack-name ${BASENAME} \
+               --template-body file://scripts/cloudformation.yml \
+               --capabilities CAPABILITY_NAMED_IAM \
+               --parameters "$(< /tmp/cfparams.json)" \
+               --output text --query 'StackId')
+
+echo "waiting on stack: ${STACK_ID}"
+
+aws cloudformation wait stack-create-complete --stack-name ${STACK_ID}
