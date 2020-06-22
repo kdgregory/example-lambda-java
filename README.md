@@ -70,25 +70,23 @@ the Resizer Lambda, which transforms the image and updates stored metadata.
 
 ## Building and Deploying
 
-Deploying the application is a multi-step process. It largely depends on CloudFormation, but
-there are a few components that have to be customized or created in advance. Fortunately,
-it's all wrapped up in a shell script:
+To build and deploy, run this script (you must have an AWS profile configured):
 
 ```
-Scripts/deploy.sh BASE_NAME BASE_BUCKET_NAME VPC_ID SUBNET_IDS
+scripts/deploy.sh BASENAME BASE_BUCKETNAME VPC_ID PUBLIC_SUBNETS [DNS_DOMAIN HOSTNAME ACM_CERT_ARN]
 ```
 
 where:
 
-* `BASE_NAME` is a unique name that's used for the stack and all deployed components; I use `LambdaPhoto`.
+* `BASE_NAME` is a unique name that's used for the stack and all deployed components. I use `LambdaPhoto`.
 * `BASE_BUCKET_NAME` is used as the prefix for all buckets used by the application (there are
-   five: one each for uploads, images, static content, Lambda deployment, and ALB access logs). This
-   name must be unique in all of AWS; I recommend an inverse-hostname such as `com-mycompany-lambdaphoto`.
-*  `VPC_ID` and `SUBNET_IDS` are used to deploy the load balancer; the latter is a comma-separated
-   list of public subnets within the VPC (eg: `subnet-123456,subnet-789012`).
-
-To run this script you will need to have your default IAM profile configured, either via
-`aws configure` or environment variables.
+  five: one each for uploads, images, static content, Lambda deployment, and ALB access logs). This
+  name must be unique in all of AWS; I recommend an inverse-hostname such as `com-mycompany-lambdaphoto`.
+* `VPC_ID` and `SUBNET_IDS` are used to deploy the load balancer; the latter is a comma-separated
+  list of public subnets within the VPC (eg: `subnet-123456,subnet-789012`).
+* `DNS_DOMAIN`, `HOSTNAME`, and `ACM_CERT_ARN` are optional parameters used to configure a custom
+  hostname for the CloudFront distribution. You must provide all three parameters, and `DNS_DOMAIN`
+  must correspond to a Route53 hosted zone assigned to the invoking account.
 
 When you run the script, it first builds the project, then creates the buckets and copies the
 deployment bundles and static content into them; you'll see various messages as this happens.
@@ -110,12 +108,13 @@ It will take 20-30 minutes to build the stack, largely due to the CloudFront dis
 every day that you leave this stack running. To avoid this cost, you can run the shutdown script:
 
 ```
-Scripts/undeploy.sh STACK_ID
+Scripts/undeploy.sh BASENAME
 ```
 
 where:
 
-* `STACK_ID` is the ID printed when starting the stack (you can also use the stack name).
+* `BASENAME` must be the same name that you passed to `deploy.sh`; you can also use the stack
+  ID.
 
 This script will delete the stack and also all buckets that were created by the `deploy` script.
 If you _don't_ want to delete the buckets, delete the stack manually using the AWS Console.
