@@ -11,7 +11,7 @@ STACK_ID=$1
 
 BUCKETS=$(aws cloudformation describe-stacks --stack-name $STACK_ID \
           --output table --query 'Stacks[].Parameters[].[ParameterKey,ParameterValue]' \
-          | grep BucketName | sed -e 's/.* |  *//' | sed -e 's/ .*//')
+          | grep BucketName | sed -e 's/.*|  *//' | sed -e 's/ .*//')
 
 for b in $BUCKETS ; do
     aws s3 rb --force s3://$b
