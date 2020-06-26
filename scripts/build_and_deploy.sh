@@ -81,7 +81,10 @@ RESIZER_FILE=$(basename "${RESIZER_PATH}")
 aws s3 cp ${RESIZER_PATH} s3://${DEPLOYMENT_BUCKET}/${RESIZER_FILE}
 
 pushd webapp-static
-aws s3 cp . s3://${STATIC_BUCKET}/ --recursive
+aws s3 cp             index.html    s3://${STATIC_BUCKET}/              --acl public-read --content-type 'text/html; charset=utf-8'
+aws s3 cp --recursive templates/    s3://${STATIC_BUCKET}/templates/    --acl public-read --content-type 'text/html; charset=utf-8'
+aws s3 cp --recursive js/           s3://${STATIC_BUCKET}/js/           --acl public-read --content-type 'text/javascript; charset=utf-8'
+aws s3 cp --recursive css/          s3://${STATIC_BUCKET}/css/          --acl public-read --content-type 'text/css; charset=utf-8'
 popd
 
 ################################################################################
