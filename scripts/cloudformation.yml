@@ -631,8 +631,19 @@ Resources:
               OriginProtocolPolicy:     "http-only"
         CacheBehaviors: 
           -
-            PathPattern:                "/api/*"
+            PathPattern:                "index.html"
             ViewerProtocolPolicy:       "redirect-to-https"
+            TargetOriginId:             "StaticContent"
+            AllowedMethods:             [ "GET", "HEAD" ]
+            ForwardedValues: 
+              QueryString:              false
+            Compress:                   true
+            MinTTL:                     0
+            MaxTTL:                     !Ref CloudFrontAssetTTL
+            DefaultTTL:                 !Ref CloudFrontAssetTTL
+          -
+            PathPattern:                "/api/*"
+            ViewerProtocolPolicy:       "https-only"
             TargetOriginId:             "API"
             AllowedMethods:             [ "GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE" ]
             ForwardedValues: 
@@ -655,19 +666,8 @@ Resources:
             MaxTTL:                     !Ref CloudFrontAssetTTL
             DefaultTTL:                 !Ref CloudFrontAssetTTL
           -
-            PathPattern:                "index.html"
-            ViewerProtocolPolicy:       "redirect-to-https"
-            TargetOriginId:             "StaticContent"
-            AllowedMethods:             [ "GET", "HEAD" ]
-            ForwardedValues: 
-              QueryString:              false
-            Compress:                   true
-            MinTTL:                     0
-            MaxTTL:                     !Ref CloudFrontAssetTTL
-            DefaultTTL:                 !Ref CloudFrontAssetTTL
-          -
             PathPattern:                "/templates/*"
-            ViewerProtocolPolicy:       "https-only"            # should only be HTTP if not from our page
+            ViewerProtocolPolicy:       "https-only"
             TargetOriginId:             "StaticContent"
             AllowedMethods:             [ "GET", "HEAD" ]
             ForwardedValues: 
@@ -678,7 +678,7 @@ Resources:
             DefaultTTL:                 !Ref CloudFrontAssetTTL
           -
             PathPattern:                "/css/*"
-            ViewerProtocolPolicy:       "https-only"            # should only be HTTP if not from our page
+            ViewerProtocolPolicy:       "https-only"
             TargetOriginId:             "StaticContent"
             AllowedMethods:             [ "GET", "HEAD" ]
             ForwardedValues: 
@@ -689,7 +689,7 @@ Resources:
             DefaultTTL:                 !Ref CloudFrontAssetTTL
           -
             PathPattern:                "/js/*"
-            ViewerProtocolPolicy:       "https-only"            # should only be HTTP if not from our page
+            ViewerProtocolPolicy:       "https-only"
             TargetOriginId:             "StaticContent"
             AllowedMethods:             [ "GET", "HEAD" ]
             ForwardedValues: 
