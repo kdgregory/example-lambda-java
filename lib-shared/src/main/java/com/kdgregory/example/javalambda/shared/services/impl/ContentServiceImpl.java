@@ -60,6 +60,7 @@ public class ContentServiceImpl implements ContentService
         ObjectMetadata s3Meta = new ObjectMetadata();
         s3Meta.setContentLength(content.length);
         s3Meta.setContentType(mimeType);
+        s3Meta.setCacheControl("public,max-age=86400,immutable");
         PutObjectResult s3Response = s3Client.putObject(
                                         imageBucket,
                                         s3Key(photoId, size),
