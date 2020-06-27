@@ -5,7 +5,8 @@
     <parent>
         <groupId>com.kdgregory.example.lambda</groupId>
         <artifactId>parent</artifactId>
-        <version>2.0.1</version>
+        <version>2.0.2</version>
+        <relativePath>..</relativePath>
     </parent>
 
     <artifactId>webapp-lambda</artifactId>
@@ -23,6 +24,12 @@
             <groupId>com.kdgregory.example.lambda</groupId>
             <artifactId>lib-shared</artifactId>
             <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>${logback.version}</version>
         </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
@@ -55,14 +62,10 @@
             <version>${aws-xray.version}</version>
         </dependency>
         <dependency>
+            <!-- note: used to provide JSON logging output, not direct logging to destinations -->
             <groupId>com.kdgregory.logging</groupId>
-            <artifactId>log4j1-aws-appenders</artifactId>
+            <artifactId>logback-aws-appenders</artifactId>
             <version>${com-kdgregory-logging.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-            <version>${log4j.version}</version>
         </dependency>
         <dependency>
             <groupId>net.sf.kdgcommons</groupId>
@@ -76,7 +79,7 @@
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
+            <artifactId>jcl-over-slf4j</artifactId>
             <version>${slf4j.version}</version>
         </dependency>
     </dependencies>

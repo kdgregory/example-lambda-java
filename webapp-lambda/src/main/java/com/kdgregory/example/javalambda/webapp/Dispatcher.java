@@ -133,8 +133,7 @@ public class Dispatcher
     /**
      *  Dispatches based on the request action. This is extracted into a method so
      *  that we can simply return from each switch. Called functions are permitted
-     *  to throw any runtime exception, and IllegalArgumentException is handled as
-     *  a special case (it's turned into a 400).
+     *  to throw any runtime exception; this is handled by caller.
      */
     private Response dispatch(Request request)
     {
@@ -151,6 +150,7 @@ public class Dispatcher
             case RequestActions.REQUEST_UPLOAD :
                 return invokeIf(request, HttpMethod.POST, authorized(r -> photoService.prepareUpload(r)));
             default:
+                logger.warn("unknown action, ignoring: {}", request.getAction());
                 return new Response(404);
         }
     }

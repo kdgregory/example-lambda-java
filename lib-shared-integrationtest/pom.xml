@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.kdgregory.example.lambda</groupId>
         <artifactId>parent</artifactId>
-        <version>2.0.1</version>
+        <version>2.0.2</version>
     </parent>
 
     <artifactId>lib-shared-integrationtests</artifactId>
@@ -24,6 +24,12 @@
             <artifactId>lib-shared</artifactId>
             <version>${project.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>${logback.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-dynamodb</artifactId>
@@ -35,13 +41,8 @@
             <version>${aws-sdk.version}</version>
         </dependency>
         <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-            <version>${log4j.version}</version>
-        </dependency>
-        <dependency>
             <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
+            <artifactId>jcl-over-slf4j</artifactId>
             <version>${slf4j.version}</version>
         </dependency>
     </dependencies>

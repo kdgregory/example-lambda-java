@@ -1,0 +1,22 @@
+<configuration debug="false">
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <layout class="com.kdgregory.logback.aws.JsonLayout">
+            <appendNewlines>true</appendNewlines>
+            <enableAccountId>false</enableAccountId>
+            <enableHostname>false</enableHostname>
+            <enableLocation>false</enableLocation>
+            <enableInstanceId>false</enableInstanceId>
+            <tags>functionName={env:AWS_LAMBDA_FUNCTION_NAME},functionVersion={env:AWS_LAMBDA_FUNCTION_VERSION}</tags>
+        </layout>
+    </appender>
+
+    <root level="warn">
+        <appender-ref ref="CONSOLE" />
+    </root>
+
+    <logger name="com.kdgregory" level="debug"/>
+
+    <logger name="httpclient.wire" level="off"/>
+
+</configuration>
