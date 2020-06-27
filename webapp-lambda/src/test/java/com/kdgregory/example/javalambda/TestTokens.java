@@ -41,18 +41,18 @@ public class TestTokens
     {
         Tokens t1 = new Tokens("test1", "test2");
         assertEquals(CollectionUtil.asMap(
-                        "Set-Cookie", "ACCESS_TOKEN=test1; Path=/; HttpOnly",
-                        "Set-COOKIE", "REFRESH_TOKEN=test2; Path=/; HttpOnly"),
+                        "Set-Cookie", String.format(Tokens.COOKIE_FORMAT, Tokens.ACCESS_TOKEN_NAME, "test1"),
+                        "Set-COOKIE", String.format(Tokens.COOKIE_FORMAT, Tokens.REFRESH_TOKEN_NAME, "test2")),
                      t1.createCookieHeaders());
 
         Tokens t2 = new Tokens(null, "test2");
         assertEquals(CollectionUtil.asMap(
-                        "Set-COOKIE", "REFRESH_TOKEN=test2; Path=/; HttpOnly"),
+                        "Set-COOKIE", String.format(Tokens.COOKIE_FORMAT, Tokens.REFRESH_TOKEN_NAME, "test2")),
                      t2.createCookieHeaders());
 
         Tokens t3 = new Tokens("test1", null);
         assertEquals(CollectionUtil.asMap(
-                        "Set-Cookie", "ACCESS_TOKEN=test1; Path=/; HttpOnly"),
+                        "Set-Cookie", String.format(Tokens.COOKIE_FORMAT, Tokens.ACCESS_TOKEN_NAME, "test1")),
                      t3.createCookieHeaders());
 
         Tokens t4 = new Tokens(null, null);
