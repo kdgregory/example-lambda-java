@@ -198,7 +198,7 @@ public class Dispatcher
 
         Map<String,String> headers = response.getTokens().createCookieHeaders();
         headers.put("Content-Type", "application/json");
-        headers.put("Cache-Control", "no-cache");
+        headers.put("Cache-Control", "no-store");
         responseMap.put("headers", headers);
 
         // body (if it exists) is always JSON
