@@ -121,4 +121,20 @@ public class TestPhotoMetadata
         assertEquals(Fields.UPLOADED_AT,  TEST_TIMESTAMP,               dst.getLong(Fields.UPLOADED_AT));
         assertEquals(Fields.SIZES,        TEST_SIZES_STR,               dst.getStringSet(Fields.SIZES));
     }
+
+
+    @Test
+    public void testCompartor() throws Exception
+    {
+        PhotoMetadata m0 = new PhotoMetadata("0", "u1", "file1", "ignored", "ignored", null,            Collections.emptyList());
+        PhotoMetadata m1 = new PhotoMetadata("1", "u1", "file1", "ignored", "ignored", Long.valueOf(1), Collections.emptyList());
+        PhotoMetadata m2 = new PhotoMetadata("2", "u1", "file1", "ignored", "ignored", Long.valueOf(2), Collections.emptyList());
+
+        assertEquals("null time sorts first",      -1, m0.compareTo(m1));
+        assertEquals("later time sorts first",     -1, m2.compareTo(m1));
+        assertEquals("earlier time storts last",    1, m1.compareTo(m2));
+        assertEquals("same time",                   0, m1.compareTo(m1));
+        assertEquals("both null",                   0, m0.compareTo(m0));
+    }
+
 }

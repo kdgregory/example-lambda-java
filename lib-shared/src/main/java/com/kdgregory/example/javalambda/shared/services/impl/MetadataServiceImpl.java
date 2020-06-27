@@ -2,6 +2,7 @@
 package com.kdgregory.example.javalambda.shared.services.impl;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -40,11 +41,9 @@ public class MetadataServiceImpl implements MetadataService
         photoIndex = metadataTable.getIndex("byID");
     }
 
-
 //----------------------------------------------------------------------------
 //  Implementation of MetadataService
 //----------------------------------------------------------------------------
-
 
     /**
      *  Stores the provided metadata.
@@ -98,6 +97,7 @@ public class MetadataServiceImpl implements MetadataService
         {
             result.add(PhotoMetadata.fromDynamoItem(item));
         }
+        Collections.sort(result);
         return result;
     }
 
@@ -117,7 +117,6 @@ public class MetadataServiceImpl implements MetadataService
             metadataTable.deleteItem(Fields.USERNAME, username, Fields.ID, photoId);
         }
     }
-
 
 //----------------------------------------------------------------------------
 //  Internals

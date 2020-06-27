@@ -24,8 +24,11 @@ import com.amazonaws.services.dynamodbv2.document.Item;
  *  client, or from a map of <code>AttributeValue</code> objects retrieved
  *  from Dynamo. Since the two maps erase to the same type, construction uses
  *  the factory methods {@link #fromClientMap} and {@link #fromDynamoMap}.
+ *  <p>
+ *  By default, instances are ordered by newest upload date first.
  */
 public class PhotoMetadata
+implements Comparable<PhotoMetadata>
 {
     /**
      *  Identifies all of the metadata fields. This is used both for Dynamo attribute
@@ -216,6 +219,15 @@ public class PhotoMetadata
                      || StringUtil.isEmpty(mimetype);
 
         return !fail;
+    }
+
+
+    @Override
+    public int compareTo(PhotoMetadata that)
+    {
+        Long u1 = ObjectUtil.defaultValue(getUploadedAt(), Long.valueOf(Long.MAX_VALUE));
+        Long u2 = ObjectUtil.defaultValue(that.getUploadedAt(), Long.valueOf(Long.MAX_VALUE));
+        return -u1.compareTo(u2);
     }
 
 
