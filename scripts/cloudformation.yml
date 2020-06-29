@@ -170,8 +170,12 @@ Resources:
             Effect:                     "Allow"
             Principal:
               CanonicalUser:            !GetAtt CloudFrontOriginIdentity.S3CanonicalUserId
-            Action:                     "s3:GetObject"
-            Resource:                   !Sub "arn:aws:s3:::${StaticBucketName}/*"
+            Action:
+              -                         "s3:GetObject"
+              -                         "s3:ListBucket"
+            Resource:
+              -                         !Sub "arn:aws:s3:::${StaticBucketName}"
+              -                         !Sub "arn:aws:s3:::${StaticBucketName}/*"
 
 
   ImageBucket:
