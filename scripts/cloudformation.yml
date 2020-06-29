@@ -712,3 +712,13 @@ Resources:
             MinTTL:                     0
             MaxTTL:                     !Ref CloudFrontAssetTTL
             DefaultTTL:                 !Ref CloudFrontAssetTTL
+
+
+Outputs:
+
+  URL:
+    Description:                        "The URL for the application root"
+    Value:                              !If
+                                          - EnableCustomDomain
+                                          - !Sub "https://${Hostname}.${DNSDomain}/index.html"
+                                          - !Sub "https://${CloudFront.DomainName}/index.html"
