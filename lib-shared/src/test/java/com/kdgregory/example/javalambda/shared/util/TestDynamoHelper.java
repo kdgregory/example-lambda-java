@@ -11,8 +11,6 @@ import static org.junit.Assert.*;
 
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 
-import com.kdgregory.example.javalambda.shared.util.DynamoHelper;
-
 
 public class TestDynamoHelper
 {

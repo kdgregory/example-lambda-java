@@ -16,8 +16,9 @@ import net.sf.kdgcommons.lang.StringUtil;
  */
 public class Tokens
 {
-    private final static String ACCESS_TOKEN = "ACCESS_TOKEN";
-    private final static String REFRESH_TOKEN = "REFRESH_TOKEN";
+    public final static String ACCESS_TOKEN_NAME  = "ACCESS_TOKEN";
+    public final static String REFRESH_TOKEN_NAME = "REFRESH_TOKEN";
+    public final static String COOKIE_FORMAT      = "%s=%s; Path=/; HttpOnly; SameSite=strict";
 
     private String accessToken;
     private String refreshToken;
@@ -62,8 +63,8 @@ public class Tokens
             tokens.put(avPair[0], avPair[1]);
         }
 
-        accessToken = tokens.get(ACCESS_TOKEN);
-        refreshToken = tokens.get(REFRESH_TOKEN);
+        accessToken = tokens.get(ACCESS_TOKEN_NAME);
+        refreshToken = tokens.get(REFRESH_TOKEN_NAME);
     }
 
 
@@ -88,24 +89,24 @@ public class Tokens
     /**
      *  Constructs the of Set-Cookie headers for the access and refresh tokens.
      *  <p>
-     *  Since these are stored in a map (because Lambda wants to transform it to
-     *  JSON), we need to pick distinct header names for each cookie. Luckily,
-     *  capitalization works (ie, API Gateway doesn't canonicalize headers).
+     *  FIXME: when I first implemented this, API Gateway did not support multi-valued
+     *  headers, so I had to use the hack of case-sensitive values. API Gateway added
+     *  support in October 2018, and ALB has supported multi-value headers since it
+     *  started supporting Lambdas, so this hack can be removed. However, doing so
+     *  means updating all of the entire request/response handling code.
      */
     public Map<String,String> createCookieHeaders()
     {
-        String format = "%s=%s; Path=/; HttpOnly";
-
         Map<String,String> result = new HashMap<String,String>();
 
         if (! StringUtil.isBlank(accessToken))
         {
-            result.put("Set-Cookie", String.format(format, ACCESS_TOKEN, accessToken));
+            result.put("Set-Cookie", String.format(COOKIE_FORMAT, ACCESS_TOKEN_NAME, accessToken));
         }
 
         if (! StringUtil.isBlank(refreshToken))
         {
-            result.put("Set-COOKIE", String.format(format, REFRESH_TOKEN, refreshToken));
+            result.put("Set-COOKIE", String.format(COOKIE_FORMAT, REFRESH_TOKEN_NAME, refreshToken));
         }
 
         return result;
@@ -118,8 +119,7 @@ public class Tokens
     @Override
     public String toString()
     {
-        return "Tokens(" + ACCESS_TOKEN  + ": " + StringUtil.substr(accessToken, 0, 8) + ", "
-                         + REFRESH_TOKEN + ": " + StringUtil.substr(refreshToken, 0, 8) + ")";
+        return "Tokens(" + ACCESS_TOKEN_NAME  + ": " + StringUtil.substr(accessToken, 0, 8) + ", "
+                         + REFRESH_TOKEN_NAME + ": " + StringUtil.substr(refreshToken, 0, 8) + ")";
     }
-
 }

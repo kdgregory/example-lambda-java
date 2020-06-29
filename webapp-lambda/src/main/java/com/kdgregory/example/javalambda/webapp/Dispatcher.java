@@ -198,11 +198,12 @@ public class Dispatcher
 
         Map<String,String> headers = response.getTokens().createCookieHeaders();
         headers.put("Content-Type", "application/json");
-        headers.put("Cache-Control", "no-cache");
+        headers.put("Cache-Control", "no-store");
         responseMap.put("headers", headers);
 
-        // default to an empty body
-        responseMap.put("body", null);
+        // body (if it exists) is always JSON
+        responseMap.put("isBase64Encoded", Boolean.FALSE);
+
         if (response.getBody() != null)
         {
             try
@@ -215,7 +216,6 @@ public class Dispatcher
                 responseMap.put("statusCode", 500);
             }
         }
-        responseMap.put("isBase64Encoded", Boolean.FALSE);
 
         return responseMap;
     }
