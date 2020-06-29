@@ -7,7 +7,7 @@
 #
 # Invocation:
 #
-#   scripts/deploy.sh BASENAME BASE_BUCKETNAME VPC_ID PUBLIC_SUBNETS [DNS_DOMAIN HOSTNAME ACM_CERT_ARN]
+#   scripts/deploy.sh BASENAME BASE_BUCKETNAME VPC_ID PUBLIC_SUBNETS [HOSTNAME DNS_DOMAIN ACM_CERT_ARN]
 #
 # Where:
 #
@@ -17,9 +17,9 @@
 #   VPC_ID          - ID of a VPC in the current account.
 #   PUBLIC_SUBNETS  - Comma-separated list of public subnets in the current account, used to
 #                     deploy ALB.
+#   HOSTNAME        - (optional) Custom hostname that will be used to access application.
 #   DNS_DOMAIN      - (optional) DNS domain that corresponds to a hosted zone managed by the
 #                     current account (do not include trailing dot).
-#   HOSTNAME        - (optional) Custom hostname that will be used to access application.
 #   ACM_CERT_ARN    - (optional) ACM certificate valid for the specified host.domain.
 #
 # To run, you must have your credentials and region configured.
@@ -30,7 +30,7 @@
 ################################################################################################
 
 if [[ $# -ne 4 && $# -ne 7 ]] ; then
-    echo "invocation: scripts/deploy.sh BASENAME BASE_BUCKETNAME VPC_ID PUBLIC_SUBNETS [DNS_DOMAIN HOSTNAME ACM_CERT_ARN]"
+    echo "invocation: scripts/deploy.sh BASENAME BASE_BUCKETNAME VPC_ID PUBLIC_SUBNETS [HOSTNAME DNS_DOMAIN ACM_CERT_ARN]"
     exit 1
 fi
 
@@ -40,8 +40,8 @@ VPC_ID=$3
 PUBLIC_SUBNETS=$4
 
 if [[ $# -gt 4 ]] ; then
-    DNS_DOMAIN=$5
-    HOSTNAME=$6
+    HOSTNAME=$5
+    DNS_DOMAIN=$6
     ACM_CERT_ARN=$7
 else
     DNS_DOMAIN=""
