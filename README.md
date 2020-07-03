@@ -7,8 +7,6 @@ This project is a simple photo-sharing site with the following features:
 * Each photo will be resized to some standard "web" sizes.
 * Users can share or embed photos via link.
 
-**This is not production-ready code.**
-
 I originally wrote it early in 2017 to support a [talk](docs/jug_presentation.pdf)
 for the [Philadelphia Java Users Group](https://www.meetup.com/PhillyJUG/). Recently
 (2019) I revisited it to generally clean up the code and use what I believe are
@@ -56,6 +54,21 @@ would offload work from the appserver. Once an image has been uploaded, the buck
 the Resizer Lambda, which transforms the image and updates stored metadata.
 
 
+### Request Processing
+
+All requests come into CloudFront, which routes them to either the appropriate S3 bucket or
+the load balancer. The default routing is for bogus requests: it forwards to the load
+balancer with an path that starts with `/blackhole`.
+
+The load balancer only accepts requests that start with the path `/api`; all others are
+sent a fixed 404 response.
+
+Depending on whether you've enabled a custom hostname, the load balancer expects HTTP on
+port 80 or HTTPS on port 443. It does not redirect 80 to 443, since all requests should
+be originating in CloudFront (which knows where to send the response).
+
+
+
 ## What's in the repository
 
 * `README.md`         - This file.
@@ -73,7 +86,7 @@ the Resizer Lambda, which transforms the image and updates stored metadata.
 To build and deploy, run this script (you must have an AWS profile configured):
 
 ```
-scripts/build_and_deploy.sh BASENAME BASE_BUCKETNAME VPC_ID PUBLIC_SUBNETS [DNS_DOMAIN HOSTNAME ACM_CERT_ARN]
+scripts/build_and_deploy.sh BASENAME BASE_BUCKETNAME VPC_ID PUBLIC_SUBNETS [HOSTNAME DNS_DOMAIN ACM_CERT_ARN]
 ```
 
 where:
@@ -84,9 +97,8 @@ where:
   name must be unique in all of AWS; I recommend an inverse-hostname such as `com-mycompany-lambdaphoto`.
 * `VPC_ID` and `SUBNET_IDS` are used to deploy the load balancer; the latter is a comma-separated
   list of public subnets within the VPC (eg: `subnet-123456,subnet-789012`).
-* `DNS_DOMAIN`, `HOSTNAME`, and `ACM_CERT_ARN` are optional parameters used to configure a custom
-  hostname for the CloudFront distribution. You must provide all three parameters, and `DNS_DOMAIN`
-  must correspond to a Route53 hosted zone assigned to the invoking account.
+* `HOSTNAME`, `DNS_DOMAIN`, and `ACM_CERT_ARN` are optional parameters used to configure a custom
+  hostname for the CloudFront distribution. See below for more information.
 
 When you run the script, it first builds the project, then creates the buckets and copies the
 deployment bundles and static content into them; you'll see various messages as this happens.
@@ -101,6 +113,23 @@ waiting on stack: arn:aws:cloudformation:us-east-1:012345678901:stack/JavaLambda
 It will take 20-30 minutes to build the stack, largely due to the CloudFront distribution.
 The script will wait until the stack is completed; interrupting the script does _not_
 interrupt stack creation.
+
+
+### Running on your own domain
+
+The optional `HOSTNAME`, `DNS_DOMAIN`, and `ACM_CERT_ARN` parameters allow you to expose the
+application using a hostname and domain that you control. This also enables HTTPS communication
+between CloudFront and the Application Load Balancer. If you do not provide these parameters,
+the application will be exposed on a URL issued by CloudFront, and the back-end API server
+will be exposed as HTTP-only on a URL issued by the load balancer.
+
+Some caveats, should you enable this feature:
+
+* There are actually two custom hostnames created, one for CloudFront and one for the API server.
+  You provide the first hostname, the second adds an `-api` suffix (so if you provide `javalambda`,
+  the script will create entries for `javalamba` and `javalamba-api`).
+* The same ACM certificate is used for both CloudFront and the API server, so must be valid for
+  both hostnames. I recommend using a wildcard cert.
 
 
 ## Shutting Down

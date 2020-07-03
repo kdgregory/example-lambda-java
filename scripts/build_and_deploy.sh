@@ -39,13 +39,13 @@ BASE_BUCKETNAME=$2
 VPC_ID=$3
 PUBLIC_SUBNETS=$4
 
-if [[ $# -gt 4 ]] ; then
+if [[ $# -eq 7 ]] ; then
     HOSTNAME=$5
     DNS_DOMAIN=$6
     ACM_CERT_ARN=$7
 else
-    DNS_DOMAIN=""
     HOSTNAME=""
+    DNS_DOMAIN=""
     ACM_CERT_ARN=""
 fi
 
@@ -108,18 +108,6 @@ cat > /tmp/cfparams.json <<EOF
     "ParameterValue":   "${PUBLIC_SUBNETS}"
   },
   {
-    "ParameterKey":     "DNSDomain",
-    "ParameterValue":   "${DNS_DOMAIN}"
-  },
-  {
-    "ParameterKey":     "Hostname",
-    "ParameterValue":   "${HOSTNAME}"
-  },
-  {
-    "ParameterKey":     "ACMCertificateArn",
-    "ParameterValue":   "${ACM_CERT_ARN}"
-  },
-  {
     "ParameterKey":     "DeploymentBucketName",
     "ParameterValue":   "${DEPLOYMENT_BUCKET}"
   },
@@ -146,13 +134,32 @@ cat > /tmp/cfparams.json <<EOF
   {
     "ParameterKey":     "ResizerJar",
     "ParameterValue":   "${RESIZER_FILE}"
+  },
+  {
+    "ParameterKey":     "DNSDomain",
+    "ParameterValue":   "${DNS_DOMAIN}"
+  },
+  {
+    "ParameterKey":     "Hostname",
+    "ParameterValue":   "${HOSTNAME}"
+  },
+  {
+    "ParameterKey":     "ACMCertificateArn",
+    "ParameterValue":   "${ACM_CERT_ARN}"
   }
 ]
 EOF
 
+
+TEMPLATE_NAME=cloudformation-http.yml
+if [[ -n $HOSTNAME ]] ; then
+    TEMPLATE_NAME=cloudformation-https.yml
+fi
+
+
 STACK_ID=$(aws cloudformation create-stack \
                --stack-name ${BASENAME} \
-               --template-body file://scripts/cloudformation.yml \
+               --template-body file://scripts/${TEMPLATE_NAME} \
                --capabilities CAPABILITY_NAMED_IAM \
                --parameters "$(< /tmp/cfparams.json)" \
                --output text --query 'StackId')
