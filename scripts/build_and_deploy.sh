@@ -72,11 +72,11 @@ aws s3 mb s3://$STATIC_BUCKET
 echo ""
 echo "uploading deployment bundles and static content"
 
-WEBAPP_PATH=(webapp-lambda/target/webapp-lambda-*.jar)
+WEBAPP_PATH=(webapp-lambda/target/webapp-lambda-*-deployment.zip)
 WEBAPP_FILE=$(basename "${WEBAPP_PATH}")
 aws s3 cp ${WEBAPP_PATH} s3://${DEPLOYMENT_BUCKET}/${WEBAPP_FILE}
 
-RESIZER_PATH=(resizer-lambda/target/resizer-lambda-*.jar)
+RESIZER_PATH=(resizer-lambda/target/resizer-lambda-*-deployment.zip)
 RESIZER_FILE=$(basename "${RESIZER_PATH}")
 aws s3 cp ${RESIZER_PATH} s3://${DEPLOYMENT_BUCKET}/${RESIZER_FILE}
 
