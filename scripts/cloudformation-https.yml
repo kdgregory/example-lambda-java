@@ -467,7 +467,7 @@ Resources:
         S3Key:                          !Ref WebappJar
       Role:                             !GetAtt WebappExecutionRole.Arn
       Handler:                          "com.kdgregory.example.javalambda.webapp.Dispatcher::handler"
-      MemorySize:                       256
+      MemorySize:                       1024
       Timeout:                          30
       Environment:
         Variables:
