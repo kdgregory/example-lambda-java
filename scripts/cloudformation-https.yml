@@ -70,7 +70,7 @@ Parameters:
 Resources:
 
   ##
-  ## Ungrouped Resources
+  ## Cognito
   ##
 
   CognitoUserPool:
@@ -78,7 +78,7 @@ Resources:
     Properties:
       UserPoolName:                     !Sub "${BaseName}-UserPool"
       AdminCreateUserConfig:
-        AllowAdminCreateUserOnly:       true
+        AllowAdminCreateUserOnly:       false
         UnusedAccountValidityDays:      7
       MfaConfiguration:                 "OFF"
       Policies:
@@ -111,10 +111,29 @@ Resources:
     Properties:
       UserPoolId:                       !Ref CognitoUserPool
       ClientName:                       "default"
+      SupportedIdentityProviders:       [ "COGNITO" ]
       ExplicitAuthFlows:                [ "ADMIN_NO_SRP_AUTH" ]
-      GenerateSecret:                   false
+      AllowedOAuthFlowsUserPoolClient:  true
+      AllowedOAuthFlows:                [ "implicit", "code" ]
+      AllowedOAuthScopes:               [  "email", "openid" ]
+      CallbackURLs:
+        -                               !Sub "https://${Hostname}.${DNSDomain}/oauth2/idpresponse"
+      LogoutURLs:
+        -                               !Sub "https://${Hostname}.${DNSDomain}/oauth2/logout"
+      #DefaultRedirectURI:
+      GenerateSecret:                   true
       RefreshTokenValidity:             7
 
+
+  CognitoUserPoolDomain:
+    Type:                               "AWS::Cognito::UserPoolDomain"
+    Properties: 
+      UserPoolId:                       !Ref CognitoUserPool
+      Domain:                           !Sub "${Hostname}-auth"
+
+  ##
+  ## Database
+  ##
 
   DynamoMetadataTable:
     Type:                               "AWS::DynamoDB::Table"
