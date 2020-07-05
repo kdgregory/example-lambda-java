@@ -112,10 +112,9 @@ Resources:
       UserPoolId:                       !Ref CognitoUserPool
       ClientName:                       "default"
       SupportedIdentityProviders:       [ "COGNITO" ]
-      ExplicitAuthFlows:                [ "ADMIN_NO_SRP_AUTH" ]
       AllowedOAuthFlowsUserPoolClient:  true
       AllowedOAuthFlows:                [ "implicit", "code" ]
-      AllowedOAuthScopes:               [  "email", "openid" ]
+      AllowedOAuthScopes:               [ "email", "openid" ]
       CallbackURLs:
         -                               !Sub "https://${Hostname}.${DNSDomain}/oauth2/idpresponse"
       LogoutURLs:
@@ -553,7 +552,15 @@ Resources:
         - CertificateArn:               !Ref ACMCertificateArn
       DefaultActions:
         -
+          Type:                         "authenticate-cognito"
+          Order:                        100
+          AuthenticateCognitoConfig:
+            UserPoolArn:                !GetAtt CognitoUserPool.Arn
+            UserPoolClientId:           !Ref CognitoUserPoolClient
+            UserPoolDomain:             !Ref CognitoUserPoolDomain
+        -
           Type:                         "fixed-response"
+          Order:                        200
           FixedResponseConfig:
             StatusCode:                 200
             ContentType:                "text/html"
@@ -672,6 +679,19 @@ Resources:
         CacheBehaviors: 
           -
             PathPattern:                "/api/*"
+            ViewerProtocolPolicy:       "https-only"
+            TargetOriginId:             "ALB"
+            AllowedMethods:             [ "GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE" ]
+            ForwardedValues: 
+              Cookies: 
+                Forward:                "all"
+              QueryString:              true
+            Compress:                   true
+            MinTTL:                     0
+            MaxTTL:                     0
+            DefaultTTL:                 0
+          -
+            PathPattern:                "/oauth2/*"
             ViewerProtocolPolicy:       "https-only"
             TargetOriginId:             "ALB"
             AllowedMethods:             [ "GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE" ]
