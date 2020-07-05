@@ -523,9 +523,28 @@ Resources:
         -
           Type:                         "fixed-response"
           FixedResponseConfig:
-            StatusCode:                 404
-            ContentType:                "text/plain"
-            MessageBody:                "invalid destination"
+            StatusCode:                 200
+            ContentType:                "text/html"
+            MessageBody:                |
+                                        <!doctype html>
+                                        <html lang="en">
+                                        <head>
+                                            <title>&lambda;Photo</title>
+                                            <link rel='StyleSheet' href='css/app.css' type='text/css'>
+                                        </head>
+                                        <body ng-app="lPhoto">
+                                            <div id="ngWrapper" ng-view>
+                                                Loading...
+                                            </div>
+                                            <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.6.1/angular.min.js"></script>
+                                            <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.6.1/angular-route.min.js"></script>
+                                            <script src="js/app.js"></script>
+                                            <script src="js/signin.js"></script>
+                                            <script src="js/confirmSignup.js"></script>
+                                            <script src="js/main.js"></script>
+                                            <script src="js/upload.js"></script>
+                                        </body>
+                                        </html>
 
 
   LoadBalancerAPIDispatchRule:
@@ -598,34 +617,16 @@ Resources:
             S3OriginConfig:
               OriginAccessIdentity:     !Sub "origin-access-identity/cloudfront/${CloudFrontOriginIdentity}"
           -
-            Id:                         "API"
+            Id:                         "ALB"
             DomainName:                 !GetAtt LoadBalancer.DNSName
-            CustomOriginConfig: 
-              HTTPPort:                 80
-              OriginProtocolPolicy:     "http-only"
-          -
-            Id:                         "BlackHole"
-            DomainName:                 !GetAtt LoadBalancer.DNSName
-            OriginPath:                 "/blackhole"        # this path won't match accidentally
             CustomOriginConfig: 
               HTTPPort:                 80
               OriginProtocolPolicy:     "http-only"
         CacheBehaviors: 
           -
-            PathPattern:                "index.html"
-            ViewerProtocolPolicy:       "redirect-to-https"
-            TargetOriginId:             "StaticContent"
-            AllowedMethods:             [ "GET", "HEAD" ]
-            ForwardedValues: 
-              QueryString:              false
-            Compress:                   true
-            MinTTL:                     0
-            MaxTTL:                     !Ref CloudFrontAssetTTL
-            DefaultTTL:                 !Ref CloudFrontAssetTTL
-          -
             PathPattern:                "/api/*"
             ViewerProtocolPolicy:       "https-only"
-            TargetOriginId:             "API"
+            TargetOriginId:             "ALB"
             AllowedMethods:             [ "GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE" ]
             ForwardedValues: 
               Cookies: 
@@ -681,11 +682,11 @@ Resources:
             DefaultTTL:                 !Ref CloudFrontAssetTTL
         DefaultCacheBehavior:
             ViewerProtocolPolicy:       "redirect-to-https"
-            TargetOriginId:             "BlackHole"
+            TargetOriginId:             "ALB"
             AllowedMethods:             [ "GET", "HEAD" ]
             ForwardedValues: 
               QueryString:              false
-            Compress:                   false
+            Compress:                   true
             MinTTL:                     0
             MaxTTL:                     !Ref CloudFrontAssetTTL
             DefaultTTL:                 !Ref CloudFrontAssetTTL
