@@ -552,15 +552,7 @@ Resources:
         - CertificateArn:               !Ref ACMCertificateArn
       DefaultActions:
         -
-          Type:                         "authenticate-cognito"
-          Order:                        100
-          AuthenticateCognitoConfig:
-            UserPoolArn:                !GetAtt CognitoUserPool.Arn
-            UserPoolClientId:           !Ref CognitoUserPoolClient
-            UserPoolDomain:             !Ref CognitoUserPoolDomain
-        -
           Type:                         "fixed-response"
-          Order:                        200
           FixedResponseConfig:
             StatusCode:                 200
             ContentType:                "text/html"
