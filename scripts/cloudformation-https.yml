@@ -543,7 +543,7 @@ Resources:
 
   LoadBalancerHTTPSListener:
     Type:                               "AWS::ElasticLoadBalancingV2::Listener"
-    DependsOn:                          [ LoadBalancerTargetGroup ]
+    DependsOn:                          [ LambdaTargetGroup ]
     Properties:
       LoadBalancerArn:                  !Ref LoadBalancer
       Protocol:                         "HTTPS"
@@ -552,7 +552,15 @@ Resources:
         - CertificateArn:               !Ref ACMCertificateArn
       DefaultActions:
         -
+          Type:                         "authenticate-cognito"
+          Order:                        100
+          AuthenticateCognitoConfig:
+            UserPoolArn:                !GetAtt CognitoUserPool.Arn
+            UserPoolClientId:           !Ref CognitoUserPoolClient
+            UserPoolDomain:             !Ref CognitoUserPoolDomain
+        -
           Type:                         "fixed-response"
+          Order:                        200
           FixedResponseConfig:
             StatusCode:                 200
             ContentType:                "text/html"
@@ -590,11 +598,19 @@ Resources:
             -                           "/api/*"
       Actions: 
         -
+          Type:                         "authenticate-cognito"
+          Order:                        100
+          AuthenticateCognitoConfig:
+            UserPoolArn:                !GetAtt CognitoUserPool.Arn
+            UserPoolClientId:           !Ref CognitoUserPoolClient
+            UserPoolDomain:             !Ref CognitoUserPoolDomain
+        -
           Type:                         "forward"
-          TargetGroupArn:               !Ref LoadBalancerTargetGroup
+          Order:                        200
+          TargetGroupArn:               !Ref LambdaTargetGroup
 
 
-  LoadBalancerTargetGroup:
+  LambdaTargetGroup:
     Type:                               "AWS::ElasticLoadBalancingV2::TargetGroup"
     DependsOn:                          [ LoadBalancerInvocationPermission ]
     Properties: 
