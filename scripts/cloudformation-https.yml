@@ -652,7 +652,7 @@ Resources:
 
   CloudFront:
     Type:                               "AWS::CloudFront::Distribution"
-    DependsOn:                          [ LoadBalancer, StaticBucketPolicy, ImageBucketPolicy ]
+    DependsOn:                          [ LoadBalancer, LogsBucketPolicy, StaticBucketPolicy, ImageBucketPolicy ]
     Properties: 
       DistributionConfig: 
         Comment:                        !Sub "${BaseName} deployment"
