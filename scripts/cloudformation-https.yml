@@ -76,7 +76,7 @@ Resources:
   CognitoUserPool:
     Type:                               "AWS::Cognito::UserPool"
     Properties:
-      UserPoolName:                     !Sub "${BaseName}-UserPool"
+      UserPoolName:                     !Ref BaseName
       AdminCreateUserConfig:
         AllowAdminCreateUserOnly:       false
         UnusedAccountValidityDays:      7
@@ -89,8 +89,7 @@ Resources:
           RequireNumbers:               true
           RequireSymbols:               false
       Schema:
-        -
-          Name:                         "email"
+        - Name:                         "email"
           Required:                     true
           Mutable:                      true
           DeveloperOnlyAttribute:       false
@@ -98,12 +97,20 @@ Resources:
           StringAttributeConstraints:
             MinLength:                  0
             MaxLength:                  2048
-        -
-          Name:                         "email_verified"
+        - Name:                         "email_verified"
           Required:                     false
           Mutable:                      true
           DeveloperOnlyAttribute:       false
           AttributeDataType:            "Boolean"
+      UsernameAttributes:               [ "email" ]
+      AutoVerifiedAttributes:           [ "email" ]
+
+
+  CognitoUserPoolDomain:
+    Type:                               "AWS::Cognito::UserPoolDomain"
+    Properties: 
+      UserPoolId:                       !Ref CognitoUserPool
+      Domain:                           !Sub "${Hostname}-auth"
 
 
   CognitoUserPoolClient:
@@ -114,7 +121,7 @@ Resources:
       SupportedIdentityProviders:       [ "COGNITO" ]
       AllowedOAuthFlowsUserPoolClient:  true
       AllowedOAuthFlows:                [ "implicit", "code" ]
-      AllowedOAuthScopes:               [ "email", "openid" ]
+      AllowedOAuthScopes:               [  "email", "openid" ]
       CallbackURLs:
         -                               !Sub "https://${Hostname}.${DNSDomain}/oauth2/idpresponse"
       LogoutURLs:
@@ -122,13 +129,6 @@ Resources:
       #DefaultRedirectURI:
       GenerateSecret:                   true
       RefreshTokenValidity:             7
-
-
-  CognitoUserPoolDomain:
-    Type:                               "AWS::Cognito::UserPoolDomain"
-    Properties: 
-      UserPoolId:                       !Ref CognitoUserPool
-      Domain:                           !Sub "${Hostname}-auth"
 
   ##
   ## Database
