@@ -249,8 +249,8 @@ Resources:
       LifecycleConfiguration: 
         Rules:
           -
-            Id:                         "DeleteUnprocessedUploads"
-            ExpirationInDays:           30
+            Id:                         "DeleteOldLogs"
+            ExpirationInDays:           7
             Status:                     "Enabled"
 
 
