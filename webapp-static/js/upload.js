@@ -1,8 +1,8 @@
 angular.module('lPhoto').
 component("upload", {
-    templateUrl: "templates/upload.html",
+    templateUrl: "https://" + window.STATIC_HOST + "/templates/upload.html",
     controller: ['$scope', '$http', '$location',
-        function UploadController($scope, $http, $location) {
+        function UploadController($scope, $http, $location, $sceDelegateProvider) {
             console.log("UploadController called");
 
             var self = this;

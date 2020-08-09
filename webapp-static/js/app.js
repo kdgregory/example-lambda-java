@@ -1,8 +1,8 @@
 angular.module('lPhoto', [
   'ngRoute'
 ]).
-config(['$locationProvider', '$routeProvider',
-  function config($locationProvider, $routeProvider) {
+config(['$locationProvider', '$routeProvider', '$sceDelegateProvider',
+  function config($locationProvider, $routeProvider, $sceDelegateProvider) {
     $locationProvider.hashPrefix('!');
 
     $routeProvider.
@@ -19,5 +19,10 @@ config(['$locationProvider', '$routeProvider',
         template: "<upload></upload>"
       }).
       otherwise("/signin");
+
+      $sceDelegateProvider.resourceUrlWhitelist([
+        "self",
+        "https://" + window.STATIC_HOST + "/**"
+      ]);
   }
 ]);

@@ -1,8 +1,8 @@
 angular.module('lPhoto').
 component("signin", {
-    templateUrl: "templates/signin.html",
+    templateUrl: "https://" + window.STATIC_HOST + "/templates/signin.html",
     controller: ['$http', '$location',
-        function SigninController($http, $location) {
+        function SigninController($http, $location, $sceDelegateProvider) {
             console.log("SigninController called");
 
             var self = this;

@@ -1,8 +1,8 @@
 angular.module('lPhoto').
 component("confirmSignup", {
-    templateUrl: "templates/confirmSignup.html",
+    templateUrl: "https://" + window.STATIC_HOST + "/templates/confirmSignup.html",
     controller: ['$http', '$location',
-        function ConfirmSignupController($http, $location) {
+        function ConfirmSignupController($http, $location, $sceDelegateProvider) {
             console.log("ConfirmSignupController called");
 
             var self = this;

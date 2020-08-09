@@ -1,8 +1,8 @@
 angular.module('lPhoto').
 component("main", {
-    templateUrl: "templates/main.html",
+    templateUrl: "https://" + window.STATIC_HOST + "/templates/main.html",
     controller: ['$scope', '$http', '$location',
-        function MainController($scope, $http, $location) {
+        function MainController($scope, $http, $location, $sceDelegateProvider) {
             console.log("MainController called");
 
             var self = this;
