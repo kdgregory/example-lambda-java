@@ -34,10 +34,6 @@ component("main", {
                             console.log("got success");
                             self.fileList = response.data.data;
                         }
-                        else if (response.data.responseCode === "NOT_AUTHENTICATED") {
-                            console.log("must authenticate");
-                            $location.path("/signIn");
-                        }
                         else {
                                 alert("got: " + response.data.responseCode);
                         }

@@ -70,10 +70,6 @@ component("upload", {
                             console.log("doUpload: successfully retrieved URL");
                             self.doUpload2(response.data.data, fileData)
                         }
-                        else if (response.data.responseCode === "NOT_AUTHENTICATED") {
-                            console.log("must authenticate");
-                            $location.path("/signIn");
-                        }
                         else {
                             alert("got: " + response.data.responseCode);
                         }
