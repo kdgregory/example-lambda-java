@@ -52,15 +52,9 @@ mvn clean install
 ################################################################################
 
 echo ""
-echo "creating static and deployment buckets"
+echo "uploading deployment bundles"
 
 aws s3 mb s3://$DEPLOYMENT_BUCKET
-aws s3 mb s3://$STATIC_BUCKET
-
-################################################################################
-
-echo ""
-echo "uploading deployment bundles and static content"
 
 WEBAPP_PATH=(webapp-lambda/target/webapp-lambda-*-deployment.zip)
 WEBAPP_FILE=$(basename "${WEBAPP_PATH}")
@@ -69,12 +63,6 @@ aws s3 cp ${WEBAPP_PATH} s3://${DEPLOYMENT_BUCKET}/${WEBAPP_FILE}
 RESIZER_PATH=(resizer-lambda/target/resizer-lambda-*-deployment.zip)
 RESIZER_FILE=$(basename "${RESIZER_PATH}")
 aws s3 cp ${RESIZER_PATH} s3://${DEPLOYMENT_BUCKET}/${RESIZER_FILE}
-
-pushd webapp-static
-aws s3 cp --recursive templates/    s3://${STATIC_BUCKET}/templates/    --acl public-read --content-type 'text/html; charset=utf-8'
-aws s3 cp --recursive js/           s3://${STATIC_BUCKET}/js/           --acl public-read --content-type 'text/javascript; charset=utf-8'
-aws s3 cp --recursive css/          s3://${STATIC_BUCKET}/css/          --acl public-read --content-type 'text/css; charset=utf-8'
-popd
 
 ################################################################################
 
@@ -149,3 +137,14 @@ STACK_ID=$(aws cloudformation create-stack \
 echo "waiting on stack: ${STACK_ID}"
 
 aws cloudformation wait stack-create-complete --stack-name ${STACK_ID}
+
+################################################################################
+
+echo ""
+echo "uploading static content"
+
+pushd webapp-static
+aws s3 cp --recursive templates/    s3://${STATIC_BUCKET}/templates/    --acl public-read --content-type 'text/html; charset=utf-8'
+aws s3 cp --recursive js/           s3://${STATIC_BUCKET}/js/           --acl public-read --content-type 'text/javascript; charset=utf-8'
+aws s3 cp --recursive css/          s3://${STATIC_BUCKET}/css/          --acl public-read --content-type 'text/css; charset=utf-8'
+popd

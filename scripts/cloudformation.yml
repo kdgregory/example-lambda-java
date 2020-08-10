@@ -159,10 +159,23 @@ Resources:
         WriteCapacityUnits:             5
 
   ##
-  ## Buckets (except static and deployment)
+  ## Buckets (except deployment)
   ##
 
-  # note: this bucket is created before the stack
+  StaticBucket:
+    Type:                               "AWS::S3::Bucket"
+    Properties:
+      BucketName:                       !Ref StaticBucketName
+      AccessControl:                    "Private"
+      CorsConfiguration:
+        CorsRules:
+          -
+            AllowedMethods:             ["GET"]
+            AllowedOrigins:             [ "*" ]
+            AllowedHeaders:             [ "*" ]
+            ExposedHeaders:             [ "ETag" ]
+
+
   StaticBucketPolicy:
     Type:                               "AWS::S3::BucketPolicy"
     DependsOn:                          [ CloudFrontOriginIdentity ]
