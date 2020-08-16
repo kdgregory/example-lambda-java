@@ -52,7 +52,7 @@ public class PhotoService
     public Response listPhotos(Request request)
     {
         String userId = request.getUser();
-        logger.info("listPhotos: user {}", userId);
+        logger.info("listPhotos: {}", userId);
 
          List<Map<String,Object>> result = new ArrayList<Map<String,Object>>();
          for (PhotoMetadata item : metadataService.retrieveByUser(userId))
@@ -60,6 +60,7 @@ public class PhotoService
              result.add(item.toClientMap());
          }
 
+        logger.debug("listPhotos: {} photos for user {}", result.size(), userId);
         return new Response(ResponseCodes.SUCCESS, result);
     }
 
