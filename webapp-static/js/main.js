@@ -1,12 +1,13 @@
 angular.module('lPhoto').
 component("main", {
-    templateUrl: "templates/main.html",
+    templateUrl: "https://" + window.STATIC_HOST + "/templates/main.html",
     controller: ['$scope', '$http', '$location',
-        function MainController($scope, $http, $location) {
+        function MainController($scope, $http, $location, $sceDelegateProvider) {
             console.log("MainController called");
 
             var self = this;
             self.fileList = [];
+            self.staticHost = "https://" + window.STATIC_HOST;
 
             self.upload = function() {
                 $location.path("/upload");
@@ -33,10 +34,6 @@ component("main", {
                         if (response.data.responseCode === "SUCCESS") {
                             console.log("got success");
                             self.fileList = response.data.data;
-                        }
-                        else if (response.data.responseCode === "NOT_AUTHENTICATED") {
-                            console.log("must authenticate");
-                            $location.path("/signIn");
                         }
                         else {
                                 alert("got: " + response.data.responseCode);

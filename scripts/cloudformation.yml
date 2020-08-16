@@ -1,5 +1,5 @@
 ##
-## Template for a base deployment.
+## Template for a deployment with custom hostnames and HTTPS between CloudFront and ALB.
 ##
 
 AWSTemplateFormatVersion:               "2010-09-09"
@@ -20,17 +20,17 @@ Parameters:
     Type:                               "List<AWS::EC2::Subnet::Id>"
 
   DNSDomain:
-    Description:                        "Used with Hostname to construct a domain-specific CNAME for the site (optional)"
+    Description:                        "The DNS domain where this site will be exposed"
     Type:                               "String"
     Default:                            ""
 
   Hostname:
-    Description:                        "Used with DNSDomain to construct a domain-specific CNAME for the site (optional)"
+    Description:                        "The DNS hostname for the main entrypoint"
     Type:                               "String"
     Default:                            ""
 
   ACMCertificateArn:
-    Description:                        "An ACM certificate ID (optional, required to use a custom DNS name)"
+    Description:                        "An ACM certificate ID"
     Type:                               "String"
 
   DeploymentBucketName:
@@ -70,15 +70,15 @@ Parameters:
 Resources:
 
   ##
-  ## Ungrouped Resources
+  ## Cognito
   ##
 
   CognitoUserPool:
     Type:                               "AWS::Cognito::UserPool"
     Properties:
-      UserPoolName:                     !Sub "${BaseName}-UserPool"
+      UserPoolName:                     !Ref BaseName
       AdminCreateUserConfig:
-        AllowAdminCreateUserOnly:       true
+        AllowAdminCreateUserOnly:       false
         UnusedAccountValidityDays:      7
       MfaConfiguration:                 "OFF"
       Policies:
@@ -89,8 +89,7 @@ Resources:
           RequireNumbers:               true
           RequireSymbols:               false
       Schema:
-        -
-          Name:                         "email"
+        - Name:                         "email"
           Required:                     true
           Mutable:                      true
           DeveloperOnlyAttribute:       false
@@ -98,12 +97,20 @@ Resources:
           StringAttributeConstraints:
             MinLength:                  0
             MaxLength:                  2048
-        -
-          Name:                         "email_verified"
+        - Name:                         "email_verified"
           Required:                     false
           Mutable:                      true
           DeveloperOnlyAttribute:       false
           AttributeDataType:            "Boolean"
+      UsernameAttributes:               [ "email" ]
+      AutoVerifiedAttributes:           [ "email" ]
+
+
+  CognitoUserPoolDomain:
+    Type:                               "AWS::Cognito::UserPoolDomain"
+    Properties:
+      UserPoolId:                       !Ref CognitoUserPool
+      Domain:                           !Sub "${Hostname}-auth"
 
 
   CognitoUserPoolClient:
@@ -111,60 +118,73 @@ Resources:
     Properties:
       UserPoolId:                       !Ref CognitoUserPool
       ClientName:                       "default"
-      ExplicitAuthFlows:                [ "ADMIN_NO_SRP_AUTH" ]
-      GenerateSecret:                   false
+      SupportedIdentityProviders:       [ "COGNITO" ]
+      AllowedOAuthFlowsUserPoolClient:  true
+      AllowedOAuthFlows:                [ "code", "implicit" ]
+      AllowedOAuthScopes:               [ "openid", "email" ]
+      CallbackURLs:                     [ !Sub "https://${Hostname}.${DNSDomain}/oauth2/idpresponse" ]
+      GenerateSecret:                   true
       RefreshTokenValidity:             7
 
+  ##
+  ## Database
+  ##
 
   DynamoMetadataTable:
     Type:                               "AWS::DynamoDB::Table"
     Properties:
       TableName:                        !Sub "${BaseName}-Metadata"
       AttributeDefinitions:
-        -
-          AttributeName:                "id"
+        - AttributeName:                "id"
           AttributeType:                "S"
-        -
-          AttributeName:                "username"
+        - AttributeName:                "username"
           AttributeType:                "S"
       KeySchema:
-        -
-          AttributeName:                "username"
+        - AttributeName:                "username"
           KeyType:                      "HASH"
-        -
-          AttributeName:                "id"
+        - AttributeName:                "id"
           KeyType:                      "RANGE"
       GlobalSecondaryIndexes:
-        -
-          IndexName:                    "byID"
-          Projection: 
+        - IndexName:                    "byID"
+          Projection:
             ProjectionType:             "KEYS_ONLY"
           ProvisionedThroughput:
             ReadCapacityUnits:          5
             WriteCapacityUnits:         5
-          KeySchema: 
-            -
-              AttributeName:            "id"
+          KeySchema:
+            - AttributeName:            "id"
               KeyType:                  "HASH"
       ProvisionedThroughput:
         ReadCapacityUnits:              10
         WriteCapacityUnits:             5
 
   ##
-  ## Buckets (except static and deployment)
+  ## Buckets (except deployment)
   ##
 
-  # note: this bucket is created before the stack
+  StaticBucket:
+    Type:                               "AWS::S3::Bucket"
+    Properties:
+      BucketName:                       !Ref StaticBucketName
+      AccessControl:                    "Private"
+      CorsConfiguration:
+        CorsRules:
+          -
+            AllowedMethods:             ["GET"]
+            AllowedOrigins:             [ "*" ]
+            AllowedHeaders:             [ "*" ]
+            ExposedHeaders:             [ "ETag" ]
+
+
   StaticBucketPolicy:
     Type:                               "AWS::S3::BucketPolicy"
     DependsOn:                          [ CloudFrontOriginIdentity ]
-    Properties: 
+    Properties:
       Bucket:                           !Ref StaticBucketName
-      PolicyDocument: 
+      PolicyDocument:
         Version:                        "2008-10-17"
         Statement:
-          -
-            Effect:                     "Allow"
+          - Effect:                     "Allow"
             Principal:
               CanonicalUser:            !GetAtt CloudFrontOriginIdentity.S3CanonicalUserId
             Action:
@@ -177,7 +197,7 @@ Resources:
 
   ImageBucket:
     Type:                               "AWS::S3::Bucket"
-    Properties: 
+    Properties:
       BucketName:                       !Ref ImageBucketName
       AccessControl:                    "Private"
 
@@ -185,13 +205,12 @@ Resources:
   ImageBucketPolicy:
     Type:                               "AWS::S3::BucketPolicy"
     DependsOn:                          [ CloudFrontOriginIdentity ]
-    Properties: 
+    Properties:
       Bucket:                           !Ref ImageBucketName
-      PolicyDocument: 
+      PolicyDocument:
         Version:                        "2008-10-17"
         Statement:
-          -
-            Effect:                     "Allow"
+          - Effect:                     "Allow"
             Principal:
               CanonicalUser:            !GetAtt CloudFrontOriginIdentity.S3CanonicalUserId
             Action:                     "s3:GetObject"
@@ -201,50 +220,45 @@ Resources:
   UploadBucket:
     Type:                               "AWS::S3::Bucket"
     DependsOn:                          [ ResizerInvocationPermission ]
-    Properties: 
+    Properties:
       BucketName:                       !Ref UploadBucketName
       AccessControl:                    "Private"
       CorsConfiguration:
         CorsRules:
-          -
-            AllowedMethods:             ["PUT"]
+          - AllowedMethods:             ["PUT"]
             AllowedOrigins:             [ "*" ]
             AllowedHeaders:             [ "*" ]
       NotificationConfiguration:
         LambdaConfigurations:
-          -
-            Event:                      "s3:ObjectCreated:*"
+          - Event:                      "s3:ObjectCreated:*"
             Function:                   !GetAtt ResizerLambdaFunction.Arn
-      LifecycleConfiguration: 
+      LifecycleConfiguration:
         Rules:
-          -
-            Id:                         "DeleteUnprocessedUploads"
+          - Id:                         "DeleteUnprocessedUploads"
             ExpirationInDays:           1
             Status:                     "Enabled"
 
 
   LogsBucket:
     Type:                               "AWS::S3::Bucket"
-    Properties: 
+    Properties:
       BucketName:                       !Ref LogsBucketName
       AccessControl:                    "Private"
-      LifecycleConfiguration: 
+      LifecycleConfiguration:
         Rules:
-          -
-            Id:                         "DeleteUnprocessedUploads"
-            ExpirationInDays:           30
+          - Id:                         "DeleteOldLogs"
+            ExpirationInDays:           7
             Status:                     "Enabled"
 
 
   LogsBucketPolicy:
     Type:                               "AWS::S3::BucketPolicy"
-    Properties: 
+    Properties:
       Bucket:                           !Ref LogsBucketName
-      PolicyDocument: 
+      PolicyDocument:
         Version:                        "2008-10-17"
         Statement:
-          -
-            Effect:                     "Allow"
+          - Effect:                     "Allow"
             Principal:
               AWS:                      # per https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-access-logs.html
                 -                       "arn:aws:iam::127311923021:root"  # us-east-1
@@ -294,24 +308,20 @@ Resources:
           Principal:
             Service:                    "lambda.amazonaws.com"
       Policies:
-        -
-          PolicyName:                   !Sub "${BaseName}-ResizerCloudWatchPolicy"
+        - PolicyName:                   !Sub "${BaseName}-ResizerCloudWatchPolicy"
           PolicyDocument:
             Version:                    "2012-10-17"
             Statement:
-              -
-                Effect:                 "Allow"
+              - Effect:                 "Allow"
                 Action:
                   -                     "logs:CreateLogGroup"
                 Resource:               "*"
-              -
-                Effect:                 "Allow"
+              - Effect:                 "Allow"
                 Action:
                   -                     "logs:CreateLogStream"
                   -                     "logs:PutLogEvents"
                 Resource:               !GetAtt ResizerLogGroup.Arn
-        -
-          PolicyName:                   !Sub "${BaseName}-ResizerDynamoPolicy"
+        - PolicyName:                   !Sub "${BaseName}-ResizerDynamoPolicy"
           PolicyDocument:
             Version:                    "2012-10-17"
             Statement:
@@ -324,19 +334,16 @@ Resources:
                 -                       !Sub "${DynamoMetadataTable.Arn}"
                 -                       !Sub "${DynamoMetadataTable.Arn}/*"
 
-        -
-          PolicyName:                   !Sub "${BaseName}-ResizerBucketPolicy"
+        - PolicyName:                   !Sub "${BaseName}-ResizerBucketPolicy"
           PolicyDocument:
             Version:                    "2012-10-17"
             Statement:
-              -
-                Effect:                 "Allow"
+              - Effect:                 "Allow"
                 Action:
                   -                     "s3:Get*"
                   -                     "s3:Put*"
                 Resource:               !Sub "arn:aws:s3:::${ImageBucketName}/*"
-              -
-                Effect:                 "Allow"
+              - Effect:                 "Allow"
                 Action:
                   -                     "s3:Get*"
                   -                     "s3:Delete*"
@@ -399,57 +406,47 @@ Resources:
           Principal:
             Service:                    "lambda.amazonaws.com"
       Policies:
-        -
-          PolicyName:                   !Sub "${BaseName}-WebappCloudWatchPolicy"
+        - PolicyName:                   !Sub "${BaseName}-WebappCloudWatchPolicy"
           PolicyDocument:
             Version:                    "2012-10-17"
             Statement:
-              -
-                Effect:                 "Allow"
+              - Effect:                 "Allow"
                 Action:
                   -                     "logs:CreateLogGroup"
                 Resource:               "*"
-              -
-                Effect:                 "Allow"
+              - Effect:                 "Allow"
                 Action:
                   -                     "logs:CreateLogStream"
                   -                     "logs:PutLogEvents"
                 Resource:               !GetAtt WebappLogGroup.Arn
-        -
-          PolicyName:                   !Sub "${BaseName}-WebappCognitoPolicy"
+        - PolicyName:                   !Sub "${BaseName}-WebappCognitoPolicy"
           PolicyDocument:
             Version:                    "2012-10-17"
             Statement:
-              -
-                Effect:                 "Allow"
+              - Effect:                 "Allow"
                 Action:
                   -                     "cognito-idp:*"
                 Resource:               !GetAtt CognitoUserPool.Arn
-        -
-          PolicyName:                   !Sub "${BaseName}-WebappDynamoPolicy"
+        - PolicyName:                   !Sub "${BaseName}-WebappDynamoPolicy"
           PolicyDocument:
             Version:                    "2012-10-17"
             Statement:
-              -
-                Effect:                 "Allow"
+              - Effect:                 "Allow"
                 Action:
                   -                     "dynamodb:GetItem"
                   -                     "dynamodb:PutItem"
                   -                     "dynamodb:Query"
                 Resource:               !GetAtt DynamoMetadataTable.Arn
-        -
-          PolicyName:                   !Sub "${BaseName}-WebappBucketPolicy"
+        - PolicyName:                   !Sub "${BaseName}-WebappBucketPolicy"
           PolicyDocument:
             Version:                    "2012-10-17"
             Statement:
-              -
-                Effect:                 "Allow"
+              - Effect:                 "Allow"
                 Action:
                   -                     "s3:Get*"
                   -                     "s3:Put*"
                 Resource:               !Sub "arn:aws:s3:::${ImageBucketName}/*"
-              -
-                Effect:                 "Allow"
+              - Effect:                 "Allow"
                 Action:
                   -                     "s3:Put*"
                 Resource:               !Sub "arn:aws:s3:::${UploadBucketName}/*"
@@ -484,23 +481,34 @@ Resources:
 
   LoadBalancerSecurityGroup:
     Type:                               "AWS::EC2::SecurityGroup"
-    Properties: 
+    Properties:
       GroupName:                        !Sub "${BaseName}-SecurityGroup"
       GroupDescription:                 !Sub "Provides Internet access to the ${BaseName} load balancer"
       VpcId:                            !Ref VpcId
-      SecurityGroupIngress: 
-        -
-          Description:                  "HTTP access from Internet"
+      SecurityGroupIngress:
+        - Description:                  "HTTPS access from Internet"
           CidrIp:                       "0.0.0.0/0"
           IpProtocol:                   "tcp"
-          FromPort:                     80
-          ToPort:                       80
+          FromPort:                     443
+          ToPort:                       443
+
+
+  LoadBalancerHostname:
+    Type:                               "AWS::Route53::RecordSet"
+    Properties:
+      Name:                             !Sub "${Hostname}.${DNSDomain}"
+      Type:                             "A"
+      HostedZoneName:                   !Sub "${DNSDomain}."
+      AliasTarget:
+        DNSName:                        !GetAtt LoadBalancer.DNSName
+        HostedZoneId:                   !GetAtt LoadBalancer.CanonicalHostedZoneID
+        EvaluateTargetHealth:           false
 
 
   LoadBalancer:
     Type:                               "AWS::ElasticLoadBalancingV2::LoadBalancer"
-    Properties: 
-      Name:                             !Sub "${BaseName}-API"
+    Properties:
+      Name:                             !Sub "${BaseName}"
       Type:                             "application"
       Scheme:                           "internet-facing"
       IpAddressType:                    "ipv4"
@@ -514,51 +522,114 @@ Resources:
 
   LoadBalancerHTTPListener:
     Type:                               "AWS::ElasticLoadBalancingV2::Listener"
-    DependsOn:                          [ LoadBalancerTargetGroup ]
-    Properties: 
+    Properties:
+      LoadBalancerArn:                  !Ref LoadBalancer
       Protocol:                         "HTTP"
       Port:                             80
+      DefaultActions:
+        - Type:                         "redirect"
+          RedirectConfig:
+            Protocol:                   "HTTPS"
+            Port:                       443
+            StatusCode:                 "HTTP_301"
+
+
+  LoadBalancerHTTPSListener:
+    Type:                               "AWS::ElasticLoadBalancingV2::Listener"
+    DependsOn:                          [ LambdaTargetGroup ]
+    Properties:
       LoadBalancerArn:                  !Ref LoadBalancer
-      DefaultActions: 
-        -
-          Type:                         "fixed-response"
+      Protocol:                         "HTTPS"
+      Port:                             443
+      Certificates:
+        - CertificateArn:               !Ref ACMCertificateArn
+      DefaultActions:
+        - Type:                         "fixed-response"
           FixedResponseConfig:
             StatusCode:                 404
-            ContentType:                "text/plain"
-            MessageBody:                "invalid destination"
+
+
+  LoadBalancerIndexDispatchRule:
+    Type:                               "AWS::ElasticLoadBalancingV2::ListenerRule"
+    Properties:
+      ListenerArn:                      !Ref LoadBalancerHTTPSListener
+      Priority:                         10
+      Conditions:
+        - Field:                        "path-pattern"
+          Values:
+            -                           "/"
+      Actions:
+        - Type:                         "authenticate-cognito"
+          Order:                        100
+          AuthenticateCognitoConfig:
+            UserPoolArn:                !GetAtt CognitoUserPool.Arn
+            UserPoolClientId:           !Ref CognitoUserPoolClient
+            UserPoolDomain:             !Ref CognitoUserPoolDomain
+            OnUnauthenticatedRequest:   "authenticate"
+        - Type:                         "fixed-response"
+          Order:                        200
+          FixedResponseConfig:
+            StatusCode:                 200
+            ContentType:                "text/html"
+            MessageBody:                !Sub |
+                                        <!doctype html>
+                                        <html lang="en">
+                                        <head>
+                                            <title>&lambda;Photo</title>
+                                            <link rel='StyleSheet' href='//${Hostname}-static.${DNSDomain}/css/app.css' type='text/css'>
+                                        </head>
+                                        <body ng-app="lPhoto">
+                                            <div id="ngWrapper" ng-view>
+                                                Loading...
+                                            </div>
+                                            <script>
+                                                window.STATIC_HOST = "${Hostname}-static.${DNSDomain}";
+                                            </script>
+                                            <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.6.1/angular.min.js"></script>
+                                            <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.6.1/angular-route.min.js"></script>
+                                            <script src="//${Hostname}-static.${DNSDomain}/js/app.js"></script>
+                                            <script src="//${Hostname}-static.${DNSDomain}/js/main.js"></script>
+                                            <script src="//${Hostname}-static.${DNSDomain}/js/upload.js"></script>
+                                        </body>
+                                        </html>
 
 
   LoadBalancerAPIDispatchRule:
     Type:                               "AWS::ElasticLoadBalancingV2::ListenerRule"
-    Properties: 
-      ListenerArn:                      !Ref LoadBalancerHTTPListener
-      Priority:                         10
-      Conditions: 
-        -
-          Field:                        "path-pattern"
+    Properties:
+      ListenerArn:                      !Ref LoadBalancerHTTPSListener
+      Priority:                         20
+      Conditions:
+        - Field:                        "path-pattern"
           Values:
             -                           "/api/*"
-      Actions: 
-        -
-          Type:                         "forward"
-          TargetGroupArn:               !Ref LoadBalancerTargetGroup
+      Actions:
+        - Type:                         "authenticate-cognito"
+          Order:                        100
+          AuthenticateCognitoConfig:
+            UserPoolArn:                !GetAtt CognitoUserPool.Arn
+            UserPoolClientId:           !Ref CognitoUserPoolClient
+            UserPoolDomain:             !Ref CognitoUserPoolDomain
+            OnUnauthenticatedRequest:   "deny"
+        - Type:                         "forward"
+          Order:                        200
+          TargetGroupArn:               !Ref LambdaTargetGroup
 
 
-  LoadBalancerTargetGroup:
+  LambdaTargetGroup:
     Type:                               "AWS::ElasticLoadBalancingV2::TargetGroup"
     DependsOn:                          [ LoadBalancerInvocationPermission ]
-    Properties: 
+    Properties:
       Name:                             !Sub "${BaseName}-LambdaTarget"
       TargetType:                       "lambda"
       HealthCheckEnabled:               false
       Targets:
-        -
-          Id:                           !GetAtt WebappLambdaFunction.Arn
+        - Id:                           !GetAtt WebappLambdaFunction.Arn
 
 
   LoadBalancerInvocationPermission:
     Type:                               "AWS::Lambda::Permission"
-    Properties: 
+    Properties:
       Action:                           "lambda:InvokeFunction"
       FunctionName:                     !Ref WebappLambdaFunction
       Principal:                        "elasticloadbalancing.amazonaws.com"
@@ -569,123 +640,101 @@ Resources:
 
   CloudFrontOriginIdentity:
     Type:                               "AWS::CloudFront::CloudFrontOriginAccessIdentity"
-    Properties: 
-      CloudFrontOriginAccessIdentityConfig: 
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
         Comment:                        !Sub "Origin identity for ${BaseName} deployment"
+
+
+  CloudFrontHostname:
+    Type:                               "AWS::Route53::RecordSet"
+    Properties:
+      Name:                             !Sub "${Hostname}-static.${DNSDomain}"
+      Type:                             "CNAME"
+      HostedZoneName:                   !Sub "${DNSDomain}."
+      TTL:                              "60"
+      ResourceRecords:                  [ !GetAtt CloudFront.DomainName ]
 
 
   CloudFront:
     Type:                               "AWS::CloudFront::Distribution"
-    DependsOn:                          [ LoadBalancer, StaticBucketPolicy, ImageBucketPolicy ]
-    Properties: 
-      DistributionConfig: 
+    DependsOn:                          [ LoadBalancer, LogsBucketPolicy, StaticBucketPolicy, ImageBucketPolicy ]
+    Properties:
+      DistributionConfig:
         Comment:                        !Sub "${BaseName} deployment"
         Enabled:                        true
         Logging:
-            Bucket:                     !GetAtt LogsBucket.DomainName
-            Prefix:                     "CloudFront"
-            IncludeCookies:             false
-        DefaultRootObject:              "index.html"
-        Origins: 
-          -
-            Id:                         "StaticContent"
+          Bucket:                       !GetAtt LogsBucket.DomainName
+          Prefix:                       "CloudFront"
+          IncludeCookies:               false
+        DefaultRootObject:              ""
+        Aliases:                        [ !Sub "${Hostname}-static.${DNSDomain}" ]
+        ViewerCertificate:
+          AcmCertificateArn:            !Ref ACMCertificateArn
+          MinimumProtocolVersion:       "TLSv1.2_2018"
+          SslSupportMethod:             "sni-only"
+        Origins:
+          - Id:                         "StaticContent"
             DomainName:                 !Sub "${StaticBucketName}.s3.amazonaws.com"
             S3OriginConfig:
               OriginAccessIdentity:     !Sub "origin-access-identity/cloudfront/${CloudFrontOriginIdentity}"
-          -
-            Id:                         "Images"
+          - Id:                         "Images"
             DomainName:                 !Sub "${ImageBucketName}.s3.amazonaws.com"
             S3OriginConfig:
               OriginAccessIdentity:     !Sub "origin-access-identity/cloudfront/${CloudFrontOriginIdentity}"
-          -
-            Id:                         "API"
-            DomainName:                 !GetAtt LoadBalancer.DNSName
-            CustomOriginConfig: 
-              HTTPPort:                 80
-              OriginProtocolPolicy:     "http-only"
-          -
-            Id:                         "BlackHole"
-            DomainName:                 !GetAtt LoadBalancer.DNSName
-            OriginPath:                 "/blackhole"        # this path won't match accidentally
-            CustomOriginConfig: 
-              HTTPPort:                 80
-              OriginProtocolPolicy:     "http-only"
-        CacheBehaviors: 
-          -
-            PathPattern:                "index.html"
-            ViewerProtocolPolicy:       "redirect-to-https"
-            TargetOriginId:             "StaticContent"
-            AllowedMethods:             [ "GET", "HEAD" ]
-            ForwardedValues: 
-              QueryString:              false
-            Compress:                   true
-            MinTTL:                     0
-            MaxTTL:                     !Ref CloudFrontAssetTTL
-            DefaultTTL:                 !Ref CloudFrontAssetTTL
-          -
-            PathPattern:                "/api/*"
-            ViewerProtocolPolicy:       "https-only"
-            TargetOriginId:             "API"
-            AllowedMethods:             [ "GET", "HEAD", "OPTIONS", "PUT", "PATCH", "POST", "DELETE" ]
-            ForwardedValues: 
-              Cookies: 
-                Forward:                "all"
-              QueryString:              true
-            Compress:                   true
-            MinTTL:                     0
-            MaxTTL:                     0
-            DefaultTTL:                 0
-          -
-            PathPattern:                "/images/*"
+          - Id:                         "ALB"
+            DomainName:                 !Ref LoadBalancerHostname
+            CustomOriginConfig:
+              HTTPPort:                 443
+              OriginProtocolPolicy:     "https-only"
+        CacheBehaviors:
+          - PathPattern:                "/images/*"
             ViewerProtocolPolicy:       "allow-all"             # images may be used on a non-HTTP site
             TargetOriginId:             "Images"
             AllowedMethods:             [ "GET", "HEAD" ]
-            ForwardedValues: 
+            ForwardedValues:
               QueryString:              false
             Compress:                   false                   # images should already be compressed
             MinTTL:                     0
             MaxTTL:                     !Ref CloudFrontAssetTTL
             DefaultTTL:                 !Ref CloudFrontAssetTTL
-          -
-            PathPattern:                "/templates/*"
+          - PathPattern:                "/templates/*"
             ViewerProtocolPolicy:       "https-only"
             TargetOriginId:             "StaticContent"
             AllowedMethods:             [ "GET", "HEAD" ]
-            ForwardedValues: 
+            ForwardedValues:
               QueryString:              false
             Compress:                   true
             MinTTL:                     0
             MaxTTL:                     !Ref CloudFrontAssetTTL
             DefaultTTL:                 !Ref CloudFrontAssetTTL
-          -
-            PathPattern:                "/css/*"
+          - PathPattern:                "/css/*"
             ViewerProtocolPolicy:       "https-only"
             TargetOriginId:             "StaticContent"
             AllowedMethods:             [ "GET", "HEAD" ]
-            ForwardedValues: 
+            ForwardedValues:
               QueryString:              false
             Compress:                   true
             MinTTL:                     0
             MaxTTL:                     !Ref CloudFrontAssetTTL
             DefaultTTL:                 !Ref CloudFrontAssetTTL
-          -
-            PathPattern:                "/js/*"
+          - PathPattern:                "/js/*"
             ViewerProtocolPolicy:       "https-only"
             TargetOriginId:             "StaticContent"
             AllowedMethods:             [ "GET", "HEAD" ]
-            ForwardedValues: 
+            ForwardedValues:
               QueryString:              false
             Compress:                   true
             MinTTL:                     0
             MaxTTL:                     !Ref CloudFrontAssetTTL
             DefaultTTL:                 !Ref CloudFrontAssetTTL
         DefaultCacheBehavior:
+            # note: unknown URL, will be served a 404 from ALB
             ViewerProtocolPolicy:       "redirect-to-https"
-            TargetOriginId:             "BlackHole"
+            TargetOriginId:             "ALB"
             AllowedMethods:             [ "GET", "HEAD" ]
-            ForwardedValues: 
+            ForwardedValues:
               QueryString:              false
-            Compress:                   false
+            Compress:                   true
             MinTTL:                     0
             MaxTTL:                     !Ref CloudFrontAssetTTL
             DefaultTTL:                 !Ref CloudFrontAssetTTL
@@ -695,4 +744,4 @@ Outputs:
 
   URL:
     Description:                        "The URL for the application root"
-    Value:                              !Sub "https://${CloudFront.DomainName}/index.html"
+    Value:                              !Sub "https://${Hostname}.${DNSDomain}/"

@@ -53,7 +53,7 @@ public class MetadataServiceImpl implements MetadataService
     @Override
     public boolean store(PhotoMetadata metadata)
     {
-        logger.debug("storing metadata for user {}, photo {}", metadata.getUser(), metadata.getId());
+        logger.debug("store: user {}, photo {}", metadata.getUser(), metadata.getId());
         if (!metadata.isValid())
         {
             logger.warn("store called with invalid metadata: {}", metadata);
@@ -71,7 +71,7 @@ public class MetadataServiceImpl implements MetadataService
     @Override
     public PhotoMetadata retrieve(String photoId)
     {
-        logger.debug("retrieving metadata for photo {}", photoId);
+        logger.debug("retrieve: photo {}", photoId);
 
         String username = retrieveUsername(photoId);
         if (username == null)
@@ -90,7 +90,7 @@ public class MetadataServiceImpl implements MetadataService
     @Override
     public List<PhotoMetadata> retrieveByUser(String username)
     {
-        logger.debug("retrieving metadata for all photos belonging to user {}", username);
+        logger.debug("retrieve by user: {}", username);
 
         List<PhotoMetadata> result = new ArrayList<>();
         for (Item item : metadataTable.query(Fields.USERNAME, username))
@@ -109,12 +109,15 @@ public class MetadataServiceImpl implements MetadataService
     @Override
     public void delete(String photoId)
     {
-        logger.debug("deleting metadata for photo {}", photoId);
-
         String username = retrieveUsername(photoId);
         if (username != null)
         {
+            logger.debug("deleting photo {} for user {}", photoId, username);
             metadataTable.deleteItem(Fields.USERNAME, username, Fields.ID, photoId);
+        }
+        else
+        {
+            logger.warn("attempted to delete unknown photo: {}", photoId);
         }
     }
 
