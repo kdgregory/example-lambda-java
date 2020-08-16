@@ -7,6 +7,7 @@ component("main", {
 
             var self = this;
             self.fileList = [];
+            self.staticHost = "https://" + window.STATIC_HOST;
 
             self.upload = function() {
                 $location.path("/upload");
