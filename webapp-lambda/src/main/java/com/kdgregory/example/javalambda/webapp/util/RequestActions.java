@@ -11,10 +11,4 @@ public class RequestActions
 
     public final static String  LIST            = "list";
     public final static String  REQUEST_UPLOAD  = "requestUpload";
-
-    // handled by UserService
-
-    public final static String  SIGNIN          = "signin";
-    public final static String  SIGNUP          = "signup";
-    public final static String  CONFIRM_SIGNUP  = "confirmSignup";
 }

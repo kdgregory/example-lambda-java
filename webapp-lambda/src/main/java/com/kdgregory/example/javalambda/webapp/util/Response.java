@@ -34,7 +34,6 @@ public class Response
 
 
     private int           statusCode = 200;
-    private Tokens        tokens     = new Tokens();
     private ResponseCodes responseCode;
     private Object        data;
 
@@ -64,31 +63,6 @@ public class Response
         this(responseCode, null);
     }
 
-
-    /**
-     *  Constructor used by the authentication check when it needs to provide
-     *  updated tokens. Status code code defaults to 200, and response code
-     *  defaults to SUCCESS.
-     */
-    public Response(Tokens updatedTokens)
-    {
-        this(ResponseCodes.SUCCESS);
-        this.tokens = updatedTokens;
-    }
-
-
-    /**
-     *  Constructor used by authorization wrapper. Attaches updated tokens to
-     *  the response.
-     */
-    public Response(Response wrapped, Tokens updatedTokens)
-    {
-        this.statusCode = wrapped.statusCode;
-        this.tokens = updatedTokens;
-        this.responseCode = wrapped.responseCode;
-        this.data = wrapped.data;
-    }
-
     /**
      *  Constructor used by dispatcher exception handlers; does not return data.
      *
@@ -106,15 +80,6 @@ public class Response
     public int getStatusCode()
     {
         return statusCode;
-    }
-
-
-    /**
-     *  Returns the tokens.
-     */
-    public Tokens getTokens()
-    {
-        return tokens;
     }
 
 

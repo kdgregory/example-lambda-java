@@ -14,12 +14,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.kdgregory.example.javalambda.webapp.services.PhotoService;
 import com.kdgregory.example.javalambda.webapp.services.UnhandledServiceException;
-import com.kdgregory.example.javalambda.webapp.services.UserService;
+import com.kdgregory.example.javalambda.webapp.services.AuthService;
 import com.kdgregory.example.javalambda.webapp.util.Request;
 import com.kdgregory.example.javalambda.webapp.util.RequestActions;
 import com.kdgregory.example.javalambda.webapp.util.Response;
 import com.kdgregory.example.javalambda.webapp.util.ResponseCodes;
-import com.kdgregory.example.javalambda.webapp.util.Tokens;
 import com.kdgregory.example.javalambda.webapp.util.Request.HttpMethod;
 
 import org.slf4j.Logger;
@@ -40,7 +39,7 @@ public class Dispatcher
     private Logger logger = LoggerFactory.getLogger(getClass());
 
     private ObjectMapper mapper = new ObjectMapper();
-    private UserService userService = new UserService();
+    private AuthService userService = new AuthService();
     private PhotoService photoService = new PhotoService();
 
     private Pattern actionRegex = Pattern.compile("/api/(.*)");
@@ -97,7 +96,7 @@ public class Dispatcher
 
         String method      = (String)CollectionUtil.getVia(albRequest, "httpMethod");
         String path        = (String)CollectionUtil.getVia(albRequest, "path");
-        String tokenHeader = (String)CollectionUtil.getVia(albRequest, "headers", "cookie");
+        String accessToken = (String)CollectionUtil.getVia(albRequest, "headers", "x-amzn-oidc-accesstoken");
         String body        = (String)CollectionUtil.getVia(albRequest, "body");
 
         logger.info("received {} {}", method, path);
@@ -118,7 +117,7 @@ public class Dispatcher
             return new Request(
                     method,
                     action,
-                    new Tokens(tokenHeader),
+                    accessToken,
                     CollectionUtil.cast(
                         mapper.readValue(body, HashMap.class),
                         String.class, Object.class));
@@ -139,12 +138,6 @@ public class Dispatcher
     {
         switch (request.getAction())
         {
-            case RequestActions.SIGNIN :
-                return invokeIf(request, HttpMethod.POST, r -> userService.signIn(r));
-            case RequestActions.SIGNUP :
-                return invokeIf(request, HttpMethod.POST, r -> userService.signUp(r));
-            case RequestActions.CONFIRM_SIGNUP :
-                return invokeIf(request, HttpMethod.POST, r -> userService.confirmSignUp(r));
             case RequestActions.LIST :
                 return invokeIf(request, HttpMethod.GET,  authorized(r -> photoService.listPhotos(r)));
             case RequestActions.REQUEST_UPLOAD :
@@ -196,7 +189,7 @@ public class Dispatcher
         Map<String,Object> responseMap = new HashMap<>();
         responseMap.put("statusCode", response.getStatusCode());
 
-        Map<String,String> headers = response.getTokens().createCookieHeaders();
+        Map<String,String> headers = new HashMap<>();
         headers.put("Content-Type", "application/json");
         headers.put("Cache-Control", "no-store");
         responseMap.put("headers", headers);
