@@ -32,7 +32,7 @@
         <aws-lambda-events.version>2.2.7</aws-lambda-events.version>
         <aws-sdk.version>1.11.800</aws-sdk.version>
         <aws-xray.version>2.4.0</aws-xray.version>
-        <com-kdgregory-logging.version>2.2.2</com-kdgregory-logging.version>
+        <com-kdgregory-logging.version>2.4.1</com-kdgregory-logging.version>
         <jackson.version>2.8.5</jackson.version>
         <jose4j.version>0.6.5</jose4j.version>
         <junit.version>4.12</junit.version>
