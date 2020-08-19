@@ -90,18 +90,19 @@ where:
   see [below](#hostnames-and-certificates) for more information.
 
 When you run the script, it first builds the project, then creates the buckets and copies the
-deployment bundles and static content into them; you'll see various messages as this happens.
-Then it starts building the CloudFormation stack; you should see a message like this:
+deployment bundles into its bucket; you'll see various messages as this happens. Next, it starts
+building the CloudFormation stack; you should see a message like this:
 
 ```
 creating CloudFormation stack
 waiting on stack: arn:aws:cloudformation:us-east-1:012345678901:stack/JavaLambda/a5c99920-ba81-11aa-8229-0e8302531d14
 ```
 
-It will take 20-30 minutes to build the stack, largely due to the CloudFront distribution.
-Aftr building the stack, the script will copy static content into its bucket. Interrupting
-the script does _not_ interrupt stack creation, and leaves the application non-functinal
-due to missing content.
+Then the script will wait for 15-20 minutes while the stack builds (I believe a large part
+of this is the CloudFront distribution, which has been getting better in the past year).
+After building the stack, the script copies static content into its bucket. Interrupting
+the script does _not_ interrupt stack creation, and leaves the application non-functional
+due to missing static content.
 
 
 ## Shutting Down
@@ -115,17 +116,20 @@ Scripts/undeploy.sh BASENAME
 
 where:
 
-* `BASENAME` must be the same name that you passed to `deploy.sh`; you can also use the stack
-  ID.
+* `BASENAME` is the same name that used when creating the stack; you can also use the stack ID.
 
-This script will delete the stack and also all buckets that were created by the `deploy` script.
+This script deletes the stack and also all buckets that were created by the deployment script.
 If you _don't_ want to delete the buckets, delete the stack manually using the AWS Console.
 
 
 ## Hostnames and Certificates
 
-This application requires custom hostnames and an ACM certificate that allows both of them to
-serve HTTPS traffic. The following Route53 entries are created by the CloudFormation stack:
+This application requires custom hostnames for the load balancer and CloudFront, along with an
+ACM certificate that allows both of them to serve HTTPS traffic. You provide a base hostname
+as a stack parameter, uses that hostname to create and assign two Route53 recordsets:
 
-* The provided hostname is used for the load balancer.
-* The CloudFront distribution uses the provided hostname plus the suffix `-static`.
+* The base hostname is used for the load balancer.
+* The CloudFront distribution uses the base hostname plus the suffix `-static`.
+
+Note that the ACM certificate must be valid for _both_ hostnames. I recommend using a wildcard
+cert.
